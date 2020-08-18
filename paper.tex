@@ -1,0 +1,73 @@
+\documentclass[a4paper, 12pt, one column]{article}
+
+%% Language and font encodings. This says how to do hyphenation on end of lines.
+\usepackage[english]{babel}
+\usepackage[utf8x]{inputenc}
+\usepackage[T1]{fontenc}
+
+%% Sets page size and margins. You can edit this to your liking
+\usepackage[top=1.3cm, bottom=2.0cm, outer=2.5cm, inner=2.5cm, heightrounded,
+marginparwidth=1.5cm, marginparsep=0.4cm, margin=2.5cm]{geometry}
+
+%% Useful packages
+\usepackage{graphicx} %allows you to use jpg or png images. PDF is still recommended
+\usepackage[colorlinks=False]{hyperref} % add links inside PDF files
+\usepackage{amsmath}  % Math fonts
+\usepackage{amsfonts} %
+\usepackage{amssymb}  %
+\usepackage[nolist,nohyperlinks]{acronym}
+
+%% Citation package
+\usepackage[authoryear]{natbib}
+\bibliographystyle{abbrvnat}
+\setcitestyle{authoryear,open={(},close={)}}
+
+
+\title{Method-independent, geographical accuracy scoring of outbreak detection algorithms}
+\author{Auss Abbood, Stéphane Ghozzi}
+
+\begin{document}
+
+\begin{acronym}
+    \acro{spa}[SPA]{statistical process analysis}
+\end{acronym}
+
+\maketitle
+
+\begin{abstract}
+Add content
+\end{abstract}
+
+\section{Introduction}
+
+Scoring the performance of outbreak detection algorithms is an important step to make scientific work in this field comparable but comparing them might be hard. The primary challges seems to be that different algorithms tackle different types of infectious diseases which vary in their dependency on time and geography, and how they spreads within a population. However, there are scores that try to make algorithms comparable beyond their exact use case. Such considerations include balance between sensitivity and specificity, the timely detection of outbreaks, and emphasis on larger, more dangerous outbreaks, and a spatially pinpoint recognition of an outbreak. 
+
+To compare different algorithms using the aforementioned scoring concepts, the same aggregation of data (case counts of a certain disease) needs to be established to make comparison more straightforward. Common aggregations are the epidemiological week for time or the lowest possible geopolitical resolution of a country (e.g, county) for space. This common aggregation level together with different specialized scores makes outbreak detection performances comparable to a large extend. 
+
+However, the spatial correctness of a detected outbreak suffers from comparability between two frequently used families of outbreak detection algorithms. One of them, called scan statistics, analyzes different spatial resolutions at the same time to find the most striking one, while the other algorithm family works with time series (e.g., Farrington). This time series depends on the user's decision for its spatial aggregation. To this date, it seems, the decision between scan statistics and time series algorithms is not entirely explainable by easily reproducible, comparable performance evaluations. 
+
+\section{Background}
+
+\subsection{Statistical process analysis}
+
+Usually, algorithms in the field of disease outbreak detection follow the idea of \ac{spa}. Using \ac{spa}, we would assume a to us known, underlying process that produces a measurable output. This output is completely or in large extend explainable by the to us known process. Once this process is defined, we can formulate a model that mirrors this process and subsequently the process' output. Given this model, we can calculate the deviation of the real-world output of the process and the output of our formal model. Should they deviate considerably, i.e., observed output of the process exceeds the expected output by a beforehand selected margin, we pronounce the process as deviant.
+
+This algorithm family expects a time series as a input and decides for each given time point \(t\) whether the process is abnormal. The timeseries must have the same aggregation as the one for which we build a model. In the field of disease outbreak detection, this would mean we are provided by measurements of the population's health (usually case numbers of a certain disease per week and county) for which we than formulate a data-driven model that mimics the underlying process of infections (for this specific disease, given this time window and space). A \ac{spa} of our choice would then make the decision each week if the case counts are within or without the known norm. 
+
+This idea can be extend using labels given by public health experts that denote parts of these time series of being \emph{in an outbreak}. The goal of the algorithm would than be to learn patterns in timeseries that in the past led to or consisted of outbreaks.
+
+\subsection{Scan statistics}
+
+Another established approach to perform disease outbreak detection is called scan statistics. This algorithm type is not bound to a specific aggregation of the input data as it is the case with \ac{spa} where another aggregation for the model would required retraining of the same. Scan statistics have an aggregation-agnostic knowledge about spatial or temporal patterns of a disease. The algorithm can be described as the following: It starts by creating many \emph{cylinders} through time and space where the depth of this cylinder can be considered the time and the width as the spatial extension of an outbreak. For each cylinder, a null-hypothesis is formulated, i.e. there is not outbreak-related shift in the observed case counts. Then a statistical test is conducted to see whether the currently observed case count of this cylinder is significantly deviating from the ones in the past. After correction for multiple testing, a outbreak is then defined as the area and time where most cylinders with a recognized outbreaks overlap.
+
+\section{Ideal scoring}
+
+By introducing the problem of comparability induced by aggregated data, we might wonder why we don't use individual case data? The original use case for epidemiologist is to find connections between single cases of infections, e.g., did they visit the same restaurant or went to the same school, to subsequently remove the cause of the outbreak. A perfect outbreak detection algorithm would keep track of each citizen and classify individuals who were recognized to be ill, if applicable, as being part of an outbreak. Formally, this would mean to correctly classify the transition \(p_{\neg o} \to p_{o_i}\) where \(p\) is a person that is identified as being part of outbreak \(o_i\) where \(i\) is the outbreak ID of outbreak \(o\). This is a hard task that would most likely require centralized information about individuals that we would not like to have at one place, e.g., current employee, last visited country, last meal, etc. Therefore, the task of outbreak detection algorithms is more general: Identify conspicuous changes within a certain, privacy preserving data aggregation, and guide epidemiologists to do targeted investigations. Therefore, it is no option to introduce scoring metrics that measure the correct allocation of outbreak IDs to individuals.
+
+We could then argue that we don't need to know how individuals are classified to be part of outbreak \(o_i\) but that it would suffice to evaluate how many cases are part of an outbreak and how many are not. This would lead to a comparable number, that would be robust to choice of geographical aggregation. Let us assume that there is an outbreak that stretches along two counties. While the scan statistics has the flexibility to consider both counties as being part of one outbreak, the \ac{spa} could not. It would, ideally, classifier both counties as being \emph{in an outbreak} but could not associate them. But, if both algorithms could tell how many cases of the currently observed are part of an outbreak, it would now matter that a \ac{spa} cannot associate two counties to one outbreak because we could compare the performance by measuring how close a algorithm got to the true \emph{in outbreak} case count.
+
+Unfortunately, this is statistically not possible. While both algorithms calculate a expected case count, identifying an outbreak equals a certain deviation from this expected values and does not necessarily mean, that the observed minus the expected case counts equals the amount of cases \emph{in outbreak}. We require a metric that unifies these two different approaches of spatial aggregation to make them comparable.
+
+\section{Geopgrahical accuracy scoring}
+\bibliography{refs}
+\end{document}
