@@ -7,3 +7,7 @@
 *.pdf
 *.bbl
 *.blg
+.coverage
+.vscode/
+.ipynb_checkpoints/*
+__pycache__/
