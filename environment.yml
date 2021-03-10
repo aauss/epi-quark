@@ -6,6 +6,7 @@ dependencies:
   - numpy=1.19.1
   - pylint=2.6.0
   - python=3.8.5
+  - scikit-learn=0.22.1
   - pip:
     - black==20.8b1
     - pytest==6.0.2
