@@ -7,55 +7,45 @@ from sklearn import metrics
 
 
 @pytest.fixture
-def paper_example_score(shared_datadir):
+def paper_example_score(shared_datadir) -> Score:
     cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
     signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
     return Score(cases, signals)
 
 
-def test_non_case_imputation(shared_datadir):
+def test_non_case_imputation(shared_datadir, paper_example_score: Score) -> None:
     cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
-    imputed = Score._impute_non_case(cases)
+    imputed = paper_example_score._impute_non_case(cases)
 
-    imputed_expected = pd.read_csv(
-        shared_datadir / "paper_example/non_case_imputed_long.csv"
-    )
+    imputed_expected = pd.read_csv(shared_datadir / "paper_example/non_case_imputed_long.csv")
     pd.testing.assert_frame_equal(imputed, imputed_expected, check_dtype=False)
 
 
-def test_signal_imputation(shared_datadir):
+def test_signal_imputation(shared_datadir, paper_example_score: Score) -> None:
     cases = pd.read_csv(shared_datadir / "paper_example/non_case_imputed_long.csv")
     signals = pd.read_csv(shared_datadir / "paper_example/signals_long.csv")
 
-    imputed = Score.impute_signals(cases, signals, "min")
-    imputed_expected = pd.read_csv(
-        shared_datadir / "paper_example/imputed_signals_long.csv"
-    )
+    imputed = paper_example_score._impute_signals(signals, cases, "min")
+    imputed_expected = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
     pd.testing.assert_frame_equal(imputed, imputed_expected, check_dtype=False)
 
 
-def test_p_di_given_x(shared_datadir, paper_example_score):
-    p_di_given_x = paper_example_score.p_di_given_x()
-    p_di_given_x_expected = pd.read_csv(
-        shared_datadir / "paper_example/p_di_given_x.csv"
-    )
-    pd.testing.assert_frame_equal(
-        p_di_given_x, p_di_given_x_expected, check_dtype=False
-    )
+def test_p_di_given_x(shared_datadir, paper_example_score: Score) -> None:
+    p_di_given_x = paper_example_score._p_di_given_x()
+    p_di_given_x_expected = pd.read_csv(shared_datadir / "paper_example/p_di_given_x.csv")
+    pd.testing.assert_frame_equal(p_di_given_x, p_di_given_x_expected, check_dtype=False)
 
 
-def test_p_hat_sj_given_x(shared_datadir, paper_example_score):
-    p_hat_sj_given_x = paper_example_score.p_hat_sj_given_x()
+def test_p_hat_sj_given_x(shared_datadir, paper_example_score: Score) -> None:
+    p_hat_sj_given_x = paper_example_score._p_hat_sj_given_x()
     p_hat_sj_given_x_expected = pd.read_csv(
         shared_datadir / "paper_example/p_hat_sj_given_x_long.csv"
     )
-    pd.testing.assert_frame_equal(
-        p_hat_sj_given_x, p_hat_sj_given_x_expected, check_dtype=False
-    )
+    pd.testing.assert_frame_equal(p_hat_sj_given_x, p_hat_sj_given_x_expected, check_dtype=False)
 
 
-def test_p_hat_di_given_sj_x(shared_datadir, paper_example_score):
-    p_hat_di_given_sj_x = paper_example_score.p_hat_di_given_sj_x()
+def test_p_hat_di_given_sj_x(shared_datadir, paper_example_score: Score) -> None:
+    p_hat_di_given_sj_x = paper_example_score._p_hat_di_given_sj_x()
     p_hat_di_given_sj_x_expected = pd.read_csv(
         shared_datadir / "paper_example/p_hat_di_given_sj_x.csv"
     )
@@ -67,11 +57,9 @@ def test_p_hat_di_given_sj_x(shared_datadir, paper_example_score):
     )
 
 
-def test_p_hat_di(shared_datadir, paper_example_score):
+def test_p_hat_di(shared_datadir, paper_example_score: Score) -> None:
     p_hat_di = (
-        paper_example_score.p_hat_di()
-        .sort_values(by=["x1", "x2", "d_i"])
-        .reset_index(drop=True)
+        paper_example_score.p_hat_di().sort_values(by=["x1", "x2", "d_i"]).reset_index(drop=True)
     )
     p_hat_di_expected = (
         pd.read_csv(shared_datadir / "paper_example/p_hat_di.csv")
@@ -85,13 +73,13 @@ def test_p_hat_di(shared_datadir, paper_example_score):
     )
 
 
-def test_eval_df(shared_datadir, paper_example_score):
+def test_eval_df(shared_datadir, paper_example_score: Score) -> None:
     eval_df = paper_example_score.eval_df()
     eval_df_expected = pd.read_csv(shared_datadir / "paper_example/eval_df.csv")
     pd.testing.assert_frame_equal(eval_df, eval_df_expected, check_dtype=False)
 
 
-def test_timeliness(shared_datadir):
+def test_timeliness(shared_datadir) -> None:
     cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
     signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
     s = Score(cases, signals)
@@ -101,7 +89,7 @@ def test_timeliness(shared_datadir):
     assert timeliness == timeliness_expected
 
 
-def test_mean_score(shared_datadir, paper_example_score):
+def test_mean_score(paper_example_score: Score) -> None:
     scores = paper_example_score.mean_score(metrics.f1_score)
     assert scores == (
         0.5175213675213676,
@@ -109,7 +97,7 @@ def test_mean_score(shared_datadir, paper_example_score):
     )
 
 
-def test_case_data_error(shared_datadir):
+def test_case_data_error(shared_datadir) -> None:
     cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
     signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
 
@@ -130,7 +118,7 @@ def test_case_data_error(shared_datadir):
         Score(cases, signals)
 
 
-def test_signal_data_error(shared_datadir):
+def test_signal_data_error(shared_datadir) -> None:
     cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
     signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
 
@@ -151,7 +139,7 @@ def test_signal_data_error(shared_datadir):
         Score(cases, signals)
 
 
-def test_class_based_conf_mat(shared_datadir, paper_example_score):
+def test_class_based_conf_mat(paper_example_score: Score) -> None:
     confusion_matrix = paper_example_score.class_based_conf_mat()
     confusion_matrix_expected = {
         "endemic": [[16, 4], [1, 4]],
