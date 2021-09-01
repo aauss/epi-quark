@@ -19,8 +19,8 @@ class DataPrepareMixin:
         return list(cases.columns[~cases.columns.isin(["data_label", "value"])])
 
     def _prepare_cases(self, cases):
-        cases = self._check_cases_correctness(cases)
-        return self._impute_non_case(cases)
+        cases_correct = self._check_cases_correctness(cases)
+        return self._impute_non_case(cases_correct)
 
     def _check_cases_correctness(self, cases) -> None:
         if "non_case" in cases["data_label"]:
@@ -73,6 +73,9 @@ class DataPrepareMixin:
             != set()
         ):
             raise ValueError("Coordinats of 'signals' must be a subset of coordinats of 'cases'.")
+        
+        if (signals.groupby(self.COORDS).size() != signals["signal_label"].nunique()).any():
+            raise ValueError("Each coordinate must contain the same amount of signals.")
         return signals
 
     def _impute_signals(

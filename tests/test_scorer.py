@@ -118,24 +118,51 @@ def test_case_data_error(shared_datadir) -> None:
         Score(cases, signals)
 
 
-def test_signal_data_error(shared_datadir) -> None:
+def test_signal_coord_error(shared_datadir) -> None:
     cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
     signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
 
     signals.at[0, "x1"] = 6
-    with pytest.raises(ValueError):
+    with pytest.raises(
+        ValueError, match="Coordinats of 'signals' must be a subset of coordinats of 'cases'."
+    ):
         Score(cases, signals)
 
-    signals.at[0, "value"] = -1.2
-    with pytest.raises(ValueError):
-        Score(cases, signals)
 
-    signals.at[0, "value"] = 2
-    with pytest.raises(ValueError):
-        Score(cases, signals)
+def test_signals_float_error(shared_datadir) -> None:
+    cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
+    signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
 
-    signals.at[0, "value"] = 1
-    with pytest.raises(ValueError):
+    signals_negative_value = signals.copy()
+    signals_negative_value.at[0, "value"] = -1.2
+    with pytest.raises(
+        ValueError, match="'values' in signal DataFrame must be floats between 0 and 1."
+    ):
+        Score(cases, signals_negative_value)
+
+    signals_high_values = signals.copy()
+    signals_high_values.at[0, "value"] = 2.0
+    with pytest.raises(
+        ValueError, match="'values' in signal DataFrame must be floats between 0 and 1."
+    ):
+        Score(cases, signals_high_values)
+
+    signals_not_float = signals.copy()
+    signals_not_float.loc[:, "value"] = 1
+    with pytest.raises(
+        ValueError, match="'values' in signal DataFrame must be floats between 0 and 1."
+    ):
+        Score(cases, signals_not_float)
+
+
+def test_signals_equal_number_error(shared_datadir) -> None:
+    cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
+    signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
+
+    signals = signals.iloc[1:]
+    with pytest.raises(
+        ValueError, match="Each coordinate must contain the same amount of signals."
+    ):
         Score(cases, signals)
 
 
