@@ -22,18 +22,21 @@ class DataPrepareMixin:
         cases_correct = self._check_cases_correctness(cases)
         return self._impute_non_case(cases_correct)
 
-    def _check_cases_correctness(self, cases) -> None:
-        if "non_case" in cases["data_label"]:
+    def _check_cases_correctness(self, cases_correct) -> None:
+        if "non_case" in cases_correct["data_label"]:
             raise ValueError(
                 "This label is included automatically and therefore internally reseverd. Please remove information on 'non-cases'"
             )
 
-        if not (pd.api.types.is_integer_dtype(cases["value"]) and (cases["value"] >= 0).all()):
+        if not (
+            pd.api.types.is_integer_dtype(cases_correct["value"])
+            and (cases_correct["value"] >= 0).all()
+        ):
             raise ValueError("Case counts must be non-negative, whole numbers.")
 
-        if cases.isna().any(axis=None) == True:
+        if cases_correct.isna().any(axis=None) == True:
             raise ValueError("Cases DataFrame must not contain any NaN values.")
-        return cases
+        return cases_correct
 
     def _impute_non_case(self, cases: pd.DataFrame) -> pd.DataFrame:
         """Imputes case numbers for non_case column.
@@ -53,30 +56,32 @@ class DataPrepareMixin:
         return pd.concat([cases, non_cases], ignore_index=True)
 
     def _prepare_signals(self, signals, cases):
-        signals = self._check_signals_correctness(signals, cases)
-        return self._impute_signals(signals, cases)
+        signals_correct = self._check_signals_correctness(signals, cases)
+        return self._impute_signals(signals_correct, cases)
 
     def _check_signals_correctness(
         self,
-        signals,
+        signals_correct,
         cases,
     ) -> None:
         if not (
-            pd.api.types.is_float_dtype(signals["value"])
-            and ((1 >= signals["value"]) & (signals["value"] >= 0)).all()
+            pd.api.types.is_float_dtype(signals_correct["value"])
+            and ((1 >= signals_correct["value"]) & (signals_correct["value"] >= 0)).all()
         ):
             raise ValueError("'values' in signal DataFrame must be floats between 0 and 1.")
 
         if (
-            set(signals.loc[:, self.COORDS].apply(tuple, axis=1))
+            set(signals_correct.loc[:, self.COORDS].apply(tuple, axis=1))
             - set(cases.loc[:, self.COORDS].apply(tuple, axis=1))
             != set()
         ):
             raise ValueError("Coordinats of 'signals' must be a subset of coordinats of 'cases'.")
-        
-        if (signals.groupby(self.COORDS).size() != signals["signal_label"].nunique()).any():
+
+        if (
+            signals_correct.groupby(self.COORDS).size() != signals_correct["signal_label"].nunique()
+        ).any():
             raise ValueError("Each coordinate must contain the same amount of signals.")
-        return signals
+        return signals_correct
 
     def _impute_signals(
         self, signals: pd.DataFrame, cases: pd.DataFrame, agg_function="min"
@@ -158,25 +163,31 @@ class Score(DataPrepareMixin):
         p_hat_thresh: Optional[float] = None,
         weighted: Optional[bool] = False,
     ) -> None:
-        """Return confusion matrix for all data labels."""
-        if p_thresh is None:
-            p_thresh = 1 / len(self.MUST_HAVE_LABELS)
-        if p_hat_thresh is None:
-            p_hat_thresh = 1 / len(self.DATA_LABELS)
+        """Return confusion matrix for all data labels.
+
+        The rows indicate the true labels and the columns the predicted labels.
+        The 0th row and column corresponds to the negative label, the 1st row
+        and column to the positive label.
+
+        You can find more on https://scikit-learn.org/stable/modules/generated/sklearn.metrics.confusion_matrix.html#sklearn.metrics.confusion_matrix
+        """
+        p_thresh = p_thresh or (1 / len(self.MUST_HAVE_LABELS))
+        p_hat_thresh = p_hat_thresh or (1 / len(self.DATA_LABELS))
 
         thresholded_eval = self._thresholded_eval_df(p_thresh, p_hat_thresh)
         if weighted:
             cm = []
             for label in thresholded_eval.columns.levels[1]:
                 sliced_eval = thresholded_eval.loc[:, (slice(None), label)]
-                duplicater = (
+                cases_per_cell_exceeding_one = (
                     self.cases.query("data_label==@label")["value"]
                     .where(lambda x: x > 1)
                     .dropna()
                     .reset_index(drop=True)
-                )
-                for idx, factor in duplicater.iteritems():
-                    for _ in range(int(factor - 1)):
+                ) - 1
+                for idx, factor in cases_per_cell_exceeding_one.iteritems():
+                    for _ in range(int(factor)):
+                        # duplicate cells that have more than one case
                         sliced_eval = sliced_eval.append(sliced_eval.iloc[idx])
                 cm.append(confusion_matrix(sliced_eval["true"].values, sliced_eval["pred"].values))
             cm = np.array(cm)
@@ -195,10 +206,8 @@ class Score(DataPrepareMixin):
         p_hat_thresh: Optional[float] = None,
     ) -> tuple[float, float]:
 
-        if p_thresh is None:
-            p_thresh = 1 / len(self.MUST_HAVE_LABELS)
-        if p_hat_thresh is None:
-            p_hat_thresh = 1 / len(self.DATA_LABELS)
+        p_thresh = p_thresh or (1 / len(self.MUST_HAVE_LABELS))
+        p_hat_thresh = p_hat_thresh or (1 / len(self.DATA_LABELS))
 
         thresholded_eval = self._thresholded_eval_df(p_thresh, p_hat_thresh)
 
@@ -216,7 +225,7 @@ class Score(DataPrepareMixin):
 
     def _thresholded_eval_df(self, p_thresh: float, p_hat_thresh: float) -> pd.DataFrame:
         return (
-            self.eval_df()
+            self._eval_df()
             .assign(
                 true=lambda x: np.where(x["p(d_i)"] >= p_thresh, 1, 0),
                 pred=lambda x: np.where(x["p^(d_i)"] >= p_hat_thresh, 1, 0),
@@ -224,14 +233,14 @@ class Score(DataPrepareMixin):
             .pivot(index=self.COORDS, columns="d_i", values=["true", "pred"])
         )
 
-    def eval_df(self) -> pd.DataFrame:
+    def _eval_df(self) -> pd.DataFrame:
         """Creates DataFrame with p(d_i | x) and p^(d_i | x)"""
         return self._p_di_given_x().merge(
-            self.p_hat_di(),
+            self._p_hat_di(),
             on=self.COORDS + ["d_i"],
         )
 
-    def p_hat_di(self) -> pd.DataFrame:
+    def _p_hat_di(self) -> pd.DataFrame:
         """Calculates p^(d_i | x) = sum( p^(d_i| s_j, x) p^(s_j, x) )"""
         p_hat_di = self._p_hat_di_given_sj_x().merge(
             self._p_hat_sj_given_x(),

@@ -59,7 +59,7 @@ def test_p_hat_di_given_sj_x(shared_datadir, paper_example_score: Score) -> None
 
 def test_p_hat_di(shared_datadir, paper_example_score: Score) -> None:
     p_hat_di = (
-        paper_example_score.p_hat_di().sort_values(by=["x1", "x2", "d_i"]).reset_index(drop=True)
+        paper_example_score._p_hat_di().sort_values(by=["x1", "x2", "d_i"]).reset_index(drop=True)
     )
     p_hat_di_expected = (
         pd.read_csv(shared_datadir / "paper_example/p_hat_di.csv")
@@ -74,7 +74,7 @@ def test_p_hat_di(shared_datadir, paper_example_score: Score) -> None:
 
 
 def test_eval_df(shared_datadir, paper_example_score: Score) -> None:
-    eval_df = paper_example_score.eval_df()
+    eval_df = paper_example_score._eval_df()
     eval_df_expected = pd.read_csv(shared_datadir / "paper_example/eval_df.csv")
     pd.testing.assert_frame_equal(eval_df, eval_df_expected, check_dtype=False)
 
