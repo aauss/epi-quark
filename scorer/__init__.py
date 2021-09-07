@@ -1,1 +1,1 @@
-from .scorer import Score, score
+from .scorer import EpiMetrics, Score, score

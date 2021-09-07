@@ -1,8 +1,9 @@
 import json
 
+import numpy as np
 import pandas as pd
 import pytest
-from scorer import Score
+from scorer import EpiMetrics, Score
 from sklearn import metrics
 
 
@@ -11,6 +12,13 @@ def paper_example_score(shared_datadir) -> Score:
     cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
     signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
     return Score(cases, signals)
+
+
+@pytest.fixture
+def paper_example_epimetric(shared_datadir) -> Score:
+    cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
+    signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
+    return EpiMetrics(cases, signals)
 
 
 def test_non_case_imputation(shared_datadir, paper_example_score: Score) -> None:
@@ -79,14 +87,38 @@ def test_eval_df(shared_datadir, paper_example_score: Score) -> None:
     pd.testing.assert_frame_equal(eval_df, eval_df_expected, check_dtype=False)
 
 
-def test_timeliness(shared_datadir) -> None:
-    cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
-    signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
-    s = Score(cases, signals)
+def test_timeliness(paper_example_epimetric: EpiMetrics) -> None:
+    timeliness = paper_example_epimetric.timeliness("x2", 4)
+    timeliness_expected = pd.Series(
+        [0.0, 0.0, 0.0], index=pd.Index(["one", "three", "two"], name="data_label")
+    )
+    pd.testing.assert_series_equal(timeliness, timeliness_expected)
 
-    timeliness = s.timeliness("x2", 4)
-    timeliness_expected = {"three": 1.0, "two": 0.5, "one": 1.0}
-    assert timeliness == timeliness_expected
+
+def test_calc_delay() -> None:
+    delay_3 = pd.DataFrame({"value_cases": [0, 0, 0], "value_signals": [0, 0, 1]})
+    assert 3 == EpiMetrics._calc_delay(delay_3)
+    delay_3 = pd.DataFrame({"value_cases": [0, 0, 1], "value_signals": [0, 0, 0]})
+    assert 3 == EpiMetrics._calc_delay(delay_3)
+    delay_3 = pd.DataFrame({"value_cases": [0, 0, 0], "value_signals": [0, 0, 0]})
+    assert 3 == EpiMetrics._calc_delay(delay_3)
+    delay_3 = pd.DataFrame({"value_cases": [0, 1, 0], "value_signals": [1, 0, 0]})
+    assert 3 == EpiMetrics._calc_delay(delay_3)
+
+    delay_2 = pd.DataFrame({"value_cases": [1, 0, 0], "value_signals": [0, 0, 1]})
+    assert 2 == EpiMetrics._calc_delay(delay_2)
+    delay_2 = pd.DataFrame({"value_cases": [1, 0, 1], "value_signals": [0, 0, 1]})
+    assert 2 == EpiMetrics._calc_delay(delay_2)
+
+    delay_1 = pd.DataFrame({"value_cases": [0, 1, 1], "value_signals": [0, 0, 1]})
+    assert 1 == EpiMetrics._calc_delay(delay_1)
+    delay_1 = pd.DataFrame({"value_cases": [1, 1, 1], "value_signals": [0, 1, 1]})
+    assert 1 == EpiMetrics._calc_delay(delay_1)
+
+    delay_0 = pd.DataFrame({"value_cases": [0, 1, 0], "value_signals": [0, 1, 1]})
+    assert 0 == EpiMetrics._calc_delay(delay_0)
+    delay_0 = pd.DataFrame({"value_cases": [1, 1, 0], "value_signals": [1, 1, 1]})
+    assert 0 == EpiMetrics._calc_delay(delay_0)
 
 
 def test_mean_score(paper_example_score: Score) -> None:
@@ -101,21 +133,28 @@ def test_case_data_error(shared_datadir) -> None:
     cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
     signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
 
-    cases.loc[2, "value"] = pd.NA
-    with pytest.raises(ValueError):
-        Score(cases, signals)
+    cases_with_nans = cases.copy()
+    cases_with_nans.loc[2, "value"] = pd.NA
+    with pytest.raises(ValueError, match="Cases DataFrame must not contain any NaN values."):
+        Score(cases_with_nans, signals)
 
-    cases.at[2, "value"] = -1
-    with pytest.raises(ValueError):
-        Score(cases, signals)
+    cases_negative = cases.copy()
+    cases_negative.at[2, "value"] = -1
+    with pytest.raises(ValueError, match="Case counts must be non-negative, whole numbers."):
+        Score(cases_negative, signals)
 
-    cases.at[2, "value"] = 2.7
-    with pytest.raises(ValueError):
-        Score(cases, signals)
+    cases_float = cases.copy()
+    cases_float.loc[:, "value"] = cases_float.loc[:, "value"].astype(float)
+    with pytest.raises(ValueError, match="Case counts must be non-negative, whole numbers."):
+        Score(cases_float, signals)
 
-    cases.at[0, "data_label"] = "non_case"
-    with pytest.raises(ValueError):
-        Score(cases, signals)
+    cases_non_case_label = cases.copy()
+    cases_non_case_label.at[0, "data_label"] = "non_case"
+    with pytest.raises(
+        ValueError,
+        match="This label is included automatically and therefore internally reseverd. Please remove information on 'non-cases'",
+    ):
+        Score(cases_non_case_label, signals)
 
 
 def test_signal_coord_error(shared_datadir) -> None:
