@@ -1,10 +1,10 @@
-from dataclasses import dataclass
 from itertools import product
 from typing import Callable, Optional
 from warnings import warn
 
 import numpy as np
 import pandas as pd
+from scipy.stats import multivariate_normal
 from sklearn import metrics
 from sklearn.metrics import confusion_matrix, multilabel_confusion_matrix
 
@@ -371,6 +371,73 @@ class EpiMetrics(DataPrepareMixin):
             return max_delay
         else:
             return max(first_signal_idx - first_case_idx, 0)
+
+    def gauss_weighting(
+        self,
+        spatial_dims: list[str],
+        covariance_diag: Optional[list[float]] = None,
+        time_axis: Optional[str] = None,
+    ) -> pd.DataFrame:
+        """Creates spatial gauss weights for scoring.
+
+        Args:
+            spatial_dims: Dimension of the case data that represent space.
+            covariance_diag: The covariance over each spatial dim in the same order as spatial_dims.
+
+        Returns:
+            Weights per data_label and spatial dimension.
+        """
+        if covariance_diag is None:
+            covariance_diag = np.diag(np.ones(len(spatial_dims)))
+        else:
+            covariance_diag = np.diag(covariance_diag)
+        case_mask = self.cases.groupby(spatial_dims + ["data_label"]).agg({"value": "sum"})
+        dim_lengths = [self.cases[col].nunique() for col in spatial_dims]
+        dims = [np.arange(0, dim_length) for dim_length in dim_lengths]
+        dims_long_format = np.array(list(product(*dims)))
+
+        case_coords_dict = {}
+        for data_label, df in case_mask.groupby("data_label"):
+            case_coords = dims_long_format[np.argwhere(df["value"].values > 0).ravel()]
+            case_coords_dict[data_label] = case_coords
+
+        weights = {}
+        for data_label, case_coords in case_coords_dict.items():
+            mvns = [multivariate_normal(case_coord, covariance_diag) for case_coord in case_coords]
+            values = [mvn.pdf(dims_long_format) for mvn in mvns]
+            score_weight = np.array(values).sum(axis=0)
+            weights[data_label] = score_weight
+        melted = pd.DataFrame(weights).melt(
+            value_name="weight",
+            var_name="data_label",
+        )
+        melted.loc[:, spatial_dims] = np.vstack([dims_long_format] * len(self.DATA_LABELS))
+        if time_axis:
+            time_mask = self._time_mask(time_axis)
+            melted = melted.merge(time_mask, on=spatial_dims + ["data_label"], how="right")
+            melted.loc[:, "masked_weight"] = melted.loc[:, "weight"] * melted.loc[:, "time_mask"]
+            return melted
+        else:
+            return melted
+
+    def _time_mask(self, time_axis: str) -> pd.DataFrame:
+        dfs = []
+        for _, df in self.cases.groupby("data_label"):
+            df = df.merge(self._all_true_after_first_true(df, time_axis), on=self.COORDS)
+            dfs.append(df)
+        return pd.concat(dfs).drop(columns="value")
+
+    def _all_true_after_first_true(self, df, time_axis):
+        mask = df.groupby(time_axis).agg({"value": "any"}).rename(columns={"value": "time_mask"})
+        mask_len = len(mask)
+        if mask["time_mask"].sum() == 0:
+            mask.loc[:, "time_mask"] = np.zeros(mask_len)
+        else:
+            first_true_idx = np.argmax(mask["time_mask"] == True)
+            mask.loc[:, "time_mask"] = np.hstack(
+                (np.zeros(first_true_idx), np.ones(mask_len - first_true_idx))
+            )
+        return df.merge(mask, on=time_axis, how="left").drop(columns=["value", "data_label"])
 
 
 def score(cases, signals, method):
