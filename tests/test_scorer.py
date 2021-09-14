@@ -14,13 +14,6 @@ def paper_example_score(shared_datadir) -> Score:
     return Score(cases, signals)
 
 
-@pytest.fixture
-def paper_example_epimetric(shared_datadir) -> Score:
-    cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
-    signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
-    return EpiMetrics(cases, signals)
-
-
 def test_non_case_imputation(shared_datadir, paper_example_score: Score) -> None:
     cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
     imputed = paper_example_score._impute_non_case(cases)
@@ -85,40 +78,6 @@ def test_eval_df(shared_datadir, paper_example_score: Score) -> None:
     eval_df = paper_example_score._eval_df()
     eval_df_expected = pd.read_csv(shared_datadir / "paper_example/eval_df.csv")
     pd.testing.assert_frame_equal(eval_df, eval_df_expected, check_dtype=False)
-
-
-def test_timeliness(paper_example_epimetric: EpiMetrics) -> None:
-    timeliness = paper_example_epimetric.timeliness("x2", 4)
-    timeliness_expected = pd.Series(
-        [0.0, 0.0, 0.0], index=pd.Index(["one", "three", "two"], name="data_label")
-    )
-    pd.testing.assert_series_equal(timeliness, timeliness_expected)
-
-
-def test_calc_delay() -> None:
-    delay_3 = pd.DataFrame({"value_cases": [0, 0, 0], "value_signals": [0, 0, 1]})
-    assert 3 == EpiMetrics._calc_delay(delay_3)
-    delay_3 = pd.DataFrame({"value_cases": [0, 0, 1], "value_signals": [0, 0, 0]})
-    assert 3 == EpiMetrics._calc_delay(delay_3)
-    delay_3 = pd.DataFrame({"value_cases": [0, 0, 0], "value_signals": [0, 0, 0]})
-    assert 3 == EpiMetrics._calc_delay(delay_3)
-    delay_3 = pd.DataFrame({"value_cases": [0, 1, 0], "value_signals": [1, 0, 0]})
-    assert 3 == EpiMetrics._calc_delay(delay_3)
-
-    delay_2 = pd.DataFrame({"value_cases": [1, 0, 0], "value_signals": [0, 0, 1]})
-    assert 2 == EpiMetrics._calc_delay(delay_2)
-    delay_2 = pd.DataFrame({"value_cases": [1, 0, 1], "value_signals": [0, 0, 1]})
-    assert 2 == EpiMetrics._calc_delay(delay_2)
-
-    delay_1 = pd.DataFrame({"value_cases": [0, 1, 1], "value_signals": [0, 0, 1]})
-    assert 1 == EpiMetrics._calc_delay(delay_1)
-    delay_1 = pd.DataFrame({"value_cases": [1, 1, 1], "value_signals": [0, 1, 1]})
-    assert 1 == EpiMetrics._calc_delay(delay_1)
-
-    delay_0 = pd.DataFrame({"value_cases": [0, 1, 0], "value_signals": [0, 1, 1]})
-    assert 0 == EpiMetrics._calc_delay(delay_0)
-    delay_0 = pd.DataFrame({"value_cases": [1, 1, 0], "value_signals": [1, 1, 1]})
-    assert 0 == EpiMetrics._calc_delay(delay_0)
 
 
 def test_mean_score(paper_example_score: Score) -> None:

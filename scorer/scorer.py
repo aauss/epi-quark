@@ -268,7 +268,7 @@ class Score(DataPrepareMixin, _ScoreBase):
         p_thresh: Optional[float] = None,
         p_hat_thresh: Optional[float] = None,
         weighted: Optional[bool] = False,
-    ) -> None:
+    ) -> dict[str, list[list[int]]]:
         """Return confusion matrix for all data labels.
 
         The rows indicate the true labels and the columns the predicted labels.
@@ -330,23 +330,20 @@ class EpiMetrics(DataPrepareMixin):
                 Each signal_label must start with 'w_' and 'w_endemic' and 'w_non_case' should be included.
         """
         super().__init__(cases, signals)
+        self.outbreak_labels = list(set(self.DATA_LABELS) - set(["endemic", "non_case"]))
+        self.outbreak_signals = list(set(self.SIGNALS_LABELS) - set(["w_endemic", "w_non_case"]))
 
-    def timeliness(self, time_axis: str, D: int) -> dict[str, float]:
-        # s = inf wenn nicht erkannt
-        outbreak_labels = list(set(self.DATA_LABELS) - set(["endemic", "non_case"]))
-        outbreak_signals = list(set(self.SIGNALS_LABELS) - set(["w_endemic", "w_non_case"]))
-
+    def timeliness(self, time_axis: str, D: int, signal_threshold: float = 0) -> pd.Series:
         signals_agg = (
-            self.signals.query("signal_label.isin(@outbreak_signals)")
+            self.signals.query("signal_label.isin(@self.outbreak_signals)")
+            .assign(value=lambda x: np.where(x["value"] > signal_threshold, 1, 0))
             .groupby(time_axis)
-            .agg({"value": "sum"})
-            .clip(0, 1)
+            .agg({"value": "any"})
         )
         cases_agg = (
-            self.cases.query("data_label.isin(@outbreak_labels)")
+            self.cases.query("data_label.isin(@self.outbreak_labels)")
             .groupby([time_axis, "data_label"])
-            .agg({"value": "sum"})
-            .clip(0, 1)
+            .agg({"value": "any"})
             .reset_index()
         )
 
@@ -359,16 +356,19 @@ class EpiMetrics(DataPrepareMixin):
             .groupby("data_label")
             .apply(self._calc_delay)
         )
-        return (1 - delays_per_label / D).clip(0,1)
+        return (1 - delays_per_label / D).clip(0, 1)
 
     @staticmethod
-    def _calc_delay(df):
+    def _calc_delay(df) -> int:
+        max_delay = len(df)
+        # should ideally work with gauss weighting
         first_case_idx = (df["value_cases"] == 1).argmax()
         first_signal_idx = (df["value_signals"] == 1).argmax()
+        # erst delay berechnen, über den delay die bedingung (ist zwischen 0 und D) prüfen und dann timeliness zurückgeben
         if (df["value_cases"].sum() == 0) or (df["value_signals"].sum() == 0):
-            return len(df)
+            return max_delay
         elif first_signal_idx < first_case_idx:
-            return len(df)
+            return max_delay
         else:
             return max(first_signal_idx - first_case_idx, 0)
 
