@@ -191,30 +191,32 @@ def test_class_based_conf_mat(paper_example_score: Score) -> None:
         confusion_matrix_weighted_expected, sort_keys=True
     )
 
-def test_thresh_check()->None:
+
+def test_thresh_check() -> None:
     tr = ThreshRequired(p_thresh=True, p_hat_thresh=True)
-    with pytest.raises(ValueError, match=
-                f"This metric requires p_thresh and requires p_hat_thresh."
-            ):
+    with pytest.raises(
+        ValueError, match=f"This metric requires p_thresh and requires p_hat_thresh."
+    ):
         tr.check_threshs_correct(None, 0.4)
 
     tr = ThreshRequired(p_thresh=True, p_hat_thresh=False)
-    with pytest.raises(ValueError, match=
-                f"This metric requires p_thresh and must not contain p_hat_thresh."
-            ):
+    with pytest.raises(
+        ValueError, match=f"This metric requires p_thresh and must not contain p_hat_thresh."
+    ):
         tr.check_threshs_correct(None, 0.4)
 
     tr = ThreshRequired(p_thresh=False, p_hat_thresh=True)
-    with pytest.raises(ValueError, match=
-                f"This metric must not contain p_thresh and requires p_hat_thresh."
-            ):
+    with pytest.raises(
+        ValueError, match=f"This metric must not contain p_thresh and requires p_hat_thresh."
+    ):
         tr.check_threshs_correct(1, 0.4)
 
     tr = ThreshRequired(p_thresh=False, p_hat_thresh=False)
-    with pytest.raises(ValueError, match=
-                f"This metric must not contain p_thresh and must not contain p_hat_thresh."
-            ):
+    with pytest.raises(
+        ValueError,
+        match=f"This metric must not contain p_thresh and must not contain p_hat_thresh.",
+    ):
         tr.check_threshs_correct(None, 0.4)
-    
+
     tr = ThreshRequired(p_thresh=True, p_hat_thresh=True)
     tr.check_threshs_correct(1, 0.4)
