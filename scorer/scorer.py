@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from itertools import product
 from typing import Callable, Optional
 from warnings import warn
@@ -5,7 +6,7 @@ from warnings import warn
 import numpy as np
 import pandas as pd
 from scipy.stats import multivariate_normal
-from sklearn import metrics
+import sklearn.metrics as sk_metrics
 from sklearn.metrics import confusion_matrix, multilabel_confusion_matrix
 
 
@@ -229,11 +230,12 @@ class Score(DataPrepareMixin, _ScoreBase):
         """
         super().__init__(cases, signals)
 
-    def mean_score(
+    def calc_score(
         self,
-        scorer,
+        scorer: sk_metrics,
         p_thresh: Optional[float] = None,
         p_hat_thresh: Optional[float] = None,
+        weighted=False,
     ) -> tuple[float, float]:
 
         p_thresh = p_thresh or (1 / len(self.MUST_HAVE_LABELS))
@@ -242,16 +244,28 @@ class Score(DataPrepareMixin, _ScoreBase):
         thresholded_eval = self._thresholded_eval_df(p_thresh, p_hat_thresh)
 
         scores = []
-        for label in thresholded_eval.columns.levels[1]:
-            score = scorer(
-                thresholded_eval.loc[:, ("true", label)].values,
-                thresholded_eval.loc[:, ("pred", label)].values,
-            )
+        labels = thresholded_eval.columns.levels[1]
+        for label in labels:
+            if not weighted:
+                score = scorer(
+                    thresholded_eval.loc[:, ("true", label)].values,
+                    thresholded_eval.loc[:, ("pred", label)].values,
+                )
+            else:
+                score = scorer(
+                    thresholded_eval.loc[:, ("true", label)].values,
+                    thresholded_eval.loc[:, ("pred", label)].values,
+                )
             scores.append(score)
-        return (
-            np.mean(scores),
-            np.average(scores, weights=thresholded_eval.loc[:, "true"].sum().values),
-        )
+        # if not weighted:
+        return dict(zip(labels, scores))
+        # else:
+        #     return np.average(scores, weights=thresholded_eval.loc[:, "true"].sum().values)
+
+    #       return (
+    #          np.mean(scores),
+    #         np.average(scores, weights=thresholded_eval.loc[:, "true"].sum().values),
+    #    )
 
     def _thresholded_eval_df(self, p_thresh: float, p_hat_thresh: float) -> pd.DataFrame:
         return (
@@ -374,25 +388,25 @@ class EpiMetrics(DataPrepareMixin):
 
     def gauss_weighting(
         self,
-        spatial_dims: list[str],
+        gauss_dims: list[str],
         covariance_diag: Optional[list[float]] = None,
         time_axis: Optional[str] = None,
     ) -> pd.DataFrame:
         """Creates spatial gauss weights for scoring.
 
         Args:
-            spatial_dims: Dimension of the case data that represent space.
-            covariance_diag: The covariance over each spatial dim in the same order as spatial_dims.
+            gauss_dims: Dimension of the case data that represent space.
+            covariance_diag: The covariance over each spatial dim in the same order as gauss_dims.
 
         Returns:
             Weights per data_label and spatial dimension.
         """
         if covariance_diag is None:
-            covariance_diag = np.diag(np.ones(len(spatial_dims)))
+            covariance_diag = np.diag(np.ones(len(gauss_dims)))
         else:
             covariance_diag = np.diag(covariance_diag)
-        case_mask = self.cases.groupby(spatial_dims + ["data_label"]).agg({"value": "sum"})
-        dim_lengths = [self.cases[col].nunique() for col in spatial_dims]
+        case_mask = self.cases.groupby(gauss_dims + ["data_label"]).agg({"value": "sum"})
+        dim_lengths = [self.cases[col].nunique() for col in gauss_dims]
         dims = [np.arange(0, dim_length) for dim_length in dim_lengths]
         dims_long_format = np.array(list(product(*dims)))
 
@@ -411,10 +425,10 @@ class EpiMetrics(DataPrepareMixin):
             value_name="weight",
             var_name="data_label",
         )
-        melted.loc[:, spatial_dims] = np.vstack([dims_long_format] * len(self.DATA_LABELS))
+        melted.loc[:, gauss_dims] = np.vstack([dims_long_format] * len(self.DATA_LABELS))
         if time_axis:
             time_mask = self._time_mask(time_axis)
-            melted = melted.merge(time_mask, on=spatial_dims + ["data_label"], how="right")
+            melted = melted.merge(time_mask, on=gauss_dims + ["data_label"], how="right")
             melted.loc[:, "masked_weight"] = melted.loc[:, "weight"] * melted.loc[:, "time_mask"]
             return melted
         else:
@@ -440,10 +454,68 @@ class EpiMetrics(DataPrepareMixin):
         return df.merge(mask, on=time_axis, how="left").drop(columns=["value", "data_label"])
 
 
-def score(cases, signals, method):
-    if method == "f1":
-        return Score(cases, signals).mean_score(metrics.f1_score)
-    elif (method == "recall") or (method == "sensitivity"):
-        return Score(cases, signals).mean_score(metrics.recall_score)
-    else:
-        "Method not recognized"
+@dataclass
+class ThreshRequired:
+    p_thresh: bool
+    p_hat_thresh: bool
+
+    def check_threshs_correct(self, p_thresh: Optional[float], p_hat_thresh: Optional[float]):
+        actual = (p_thresh != None, p_hat_thresh != None)
+        threshs_correct = actual == (self.p_thresh, self.p_hat_thresh)
+        if not threshs_correct:
+            raise ValueError(
+                f"This metric {self._thresh_text(self.p_thresh)} p_thresh and {self._thresh_text(self.p_hat_thresh)} p_hat_thresh."
+            )
+
+    def _thresh_text(self, thresh):
+        if thresh:
+            thresh_text = "requires"
+        else:
+            thresh_text = "must not contain"
+        return thresh_text
+
+
+def check_threshs(metric=None, p_thresh=None, p_hat_thresh=None):
+    required_treshs = {
+        "f1": ThreshRequired(p_thresh=True, p_hat_thresh=True),
+        "brier": ThreshRequired(p_thresh=True, p_hat_thresh=False),
+        "auc": ThreshRequired(p_thresh=True, p_hat_thresh=False),
+        "sensitivity": ThreshRequired(p_thresh=True, p_hat_thresh=True),
+        "specificity": ThreshRequired(p_thresh=True, p_hat_thresh=True),
+        "matthews": ThreshRequired(p_thresh=True, p_hat_thresh=True),
+        "r2": ThreshRequired(p_thresh=False, p_hat_thresh=False),
+        "mse": ThreshRequired(p_thresh=False, p_hat_thresh=False),
+    }
+    try:
+        required_tresh = required_treshs[metric]
+    except KeyError as e:
+        raise KeyError(
+            f"This metric is not recognized. Please use one of the following: {', '.join(required_treshs.keys())}"
+        )
+
+    required_tresh.check_threshs_correct(p_thresh=p_thresh, p_hat_thresh=p_hat_thresh)
+
+
+def _sensitivity(true, pred):
+    tn, fp, fn, tp = confusion_matrix(true, pred).ravel()
+    return tp / (tp + fn)
+
+
+def _specificity(true, pred):
+    tn, fp, fn, tp = confusion_matrix(true, pred).ravel()
+    return tn / (tn + fp)
+
+
+def score(cases, signals, metric, p_thresh=None, p_hat_thresh=None):
+    check_threshs(metric, p_thresh, p_hat_thresh)
+    metrics = {
+        "f1": sk_metrics.f1_score,
+        "brier": sk_metrics.brier_score_loss,
+        "auc": sk_metrics.auc,
+        "sensitivity": _sensitivity,
+        "specificity": _specificity,
+        "matthews": sk_metrics.matthews_corrcoef,
+        "r2": sk_metrics.r2_score,
+        "mse": sk_metrics.mean_squared_error,
+    }
+    return Score(cases, signals).calc_score(metrics[metric])

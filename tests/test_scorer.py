@@ -1,9 +1,8 @@
 import json
 
-import numpy as np
 import pandas as pd
 import pytest
-from scorer import EpiMetrics, Score
+from scorer import Score, ThreshRequired
 from sklearn import metrics
 
 
@@ -80,12 +79,15 @@ def test_eval_df(shared_datadir, paper_example_score: Score) -> None:
     pd.testing.assert_frame_equal(eval_df, eval_df_expected, check_dtype=False)
 
 
-def test_mean_score(paper_example_score: Score) -> None:
-    scores = paper_example_score.mean_score(metrics.f1_score)
-    assert scores == (
-        0.5175213675213676,
-        0.7006081525312294,
-    )
+def test_score(paper_example_score: Score) -> None:
+    scores = paper_example_score.calc_score(metrics.f1_score)
+    assert scores == {
+        "endemic": 0.6153846153846154,
+        "non_case": 1.0,
+        "one": 0.7499999999999999,
+        "three": 0.0,
+        "two": 0.22222222222222224,
+    }
 
 
 def test_case_data_error(shared_datadir) -> None:
@@ -188,3 +190,31 @@ def test_class_based_conf_mat(paper_example_score: Score) -> None:
     assert json.dumps(confusion_matrix_weighted, sort_keys=True) == json.dumps(
         confusion_matrix_weighted_expected, sort_keys=True
     )
+
+def test_thresh_check()->None:
+    tr = ThreshRequired(p_thresh=True, p_hat_thresh=True)
+    with pytest.raises(ValueError, match=
+                f"This metric requires p_thresh and requires p_hat_thresh."
+            ):
+        tr.check_threshs_correct(None, 0.4)
+
+    tr = ThreshRequired(p_thresh=True, p_hat_thresh=False)
+    with pytest.raises(ValueError, match=
+                f"This metric requires p_thresh and must not contain p_hat_thresh."
+            ):
+        tr.check_threshs_correct(None, 0.4)
+
+    tr = ThreshRequired(p_thresh=False, p_hat_thresh=True)
+    with pytest.raises(ValueError, match=
+                f"This metric must not contain p_thresh and requires p_hat_thresh."
+            ):
+        tr.check_threshs_correct(1, 0.4)
+
+    tr = ThreshRequired(p_thresh=False, p_hat_thresh=False)
+    with pytest.raises(ValueError, match=
+                f"This metric must not contain p_thresh and must not contain p_hat_thresh."
+            ):
+        tr.check_threshs_correct(None, 0.4)
+    
+    tr = ThreshRequired(p_thresh=True, p_hat_thresh=True)
+    tr.check_threshs_correct(1, 0.4)
