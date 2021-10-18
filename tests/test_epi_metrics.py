@@ -51,15 +51,21 @@ def test_time_masking(shared_datadir, paper_example_epimetric) -> None:
     expected = pd.read_csv(shared_datadir / "paper_example/time_masking.csv")
     pd.testing.assert_frame_equal(time_mask, expected)
 
+    # case where no cases appear on one label
+    cases = paper_example_epimetric.cases
+    cases.loc[cases["data_label"] == "one", "value"] = 0
+    time_mask = paper_example_epimetric._time_mask("x2").reset_index(drop=True)
+    expected = pd.read_csv(shared_datadir / "paper_example/time_masking.csv")
+    expected.loc[expected["data_label"] == "one", "time_mask"] = 0
+    pd.testing.assert_frame_equal(time_mask, expected)
+
 
 def test_gauss_weighting(shared_datadir, paper_example_epimetric: EpiMetrics) -> None:
     gauss_weights = paper_example_epimetric.gauss_weighting(["x1", "x2"])
     expected = pd.read_csv(shared_datadir / "paper_example/gauss_weights.csv")
     pd.testing.assert_frame_equal(gauss_weights, expected)
 
-    gauss_weights = paper_example_epimetric.gauss_weighting(
-        ["x1", "x2"],np.diag(np.ones(2))
-    )
+    gauss_weights = paper_example_epimetric.gauss_weighting(["x1", "x2"], np.diag(np.ones(2)))
     expected = pd.read_csv(shared_datadir / "paper_example/gauss_weights.csv")
     pd.testing.assert_frame_equal(gauss_weights, expected)
 
