@@ -5,8 +5,8 @@ from warnings import warn
 
 import numpy as np
 import pandas as pd
-from scipy.stats import multivariate_normal
 import sklearn.metrics as sk_metrics
+from scipy.stats import multivariate_normal
 from sklearn.metrics import confusion_matrix, multilabel_confusion_matrix
 
 
@@ -36,7 +36,7 @@ class DataPrepareMixin:
 
         if "non_case" in cases_correct["data_label"].values:
             raise ValueError(
-                "This label is included automatically and therefore internally reseverd. Please remove information on 'non-cases'"
+                "Please remove entries with label 'non_cases' from cases DataFrame. This label is included automatically and therefore internally reseverd."
             )
 
         if not (
@@ -235,47 +235,52 @@ class Score(DataPrepareMixin, _ScoreBase):
         scorer: sk_metrics,
         p_thresh: Optional[float] = None,
         p_hat_thresh: Optional[float] = None,
-        weighted=False,
+        weights: Optional[str] = None,
+        gauss_dims: Optional[list] = None,
+        covariance_diag: Optional[list[float]] = None,
+        time_axis: Optional[str] = None,
     ) -> tuple[float, float]:
 
-        p_thresh = p_thresh or (1 / len(self.MUST_HAVE_LABELS))
-        p_hat_thresh = p_hat_thresh or (1 / len(self.DATA_LABELS))
-
-        thresholded_eval = self._thresholded_eval_df(p_thresh, p_hat_thresh)
-
-        scores = []
-        labels = thresholded_eval.columns.levels[1]
-        for label in labels:
-            if not weighted:
-                score = scorer(
-                    thresholded_eval.loc[:, ("true", label)].values,
-                    thresholded_eval.loc[:, ("pred", label)].values,
-                )
-            else:
-                score = scorer(
-                    thresholded_eval.loc[:, ("true", label)].values,
-                    thresholded_eval.loc[:, ("pred", label)].values,
-                )
-            scores.append(score)
-        # if not weighted:
-        return dict(zip(labels, scores))
-        # else:
-        #     return np.average(scores, weights=thresholded_eval.loc[:, "true"].sum().values)
-
-    #       return (
-    #          np.mean(scores),
-    #         np.average(scores, weights=thresholded_eval.loc[:, "true"].sum().values),
-    #    )
-
-    def _thresholded_eval_df(self, p_thresh: float, p_hat_thresh: float) -> pd.DataFrame:
-        return (
-            self._eval_df()
-            .assign(
-                true=lambda x: np.where(x["p(d_i)"] >= p_thresh, 1, 0),
-                pred=lambda x: np.where(x["p^(d_i)"] >= p_hat_thresh, 1, 0),
+        eval_df = self._thresholded_eval_df(p_thresh, p_hat_thresh)
+        if weights is None:
+            eval_df["weight"] = 1
+        elif weights == "cases":
+            eval_df = eval_df.merge(
+                self.cases, left_on=self.COORDS + ["d_i"], right_on=self.COORDS + ["data_label"]
+            ).rename(columns={"value": "weight"})
+        elif weights == "timespace":
+            epimetrics = EpiMetrics(self.cases.query("data_label!='non_case'"), self.signals)
+            gauss_weights = epimetrics.gauss_weighting(gauss_dims, covariance_diag, time_axis)
+            coords = list(set(epimetrics.COORDS).intersection(set(gauss_weights.columns)))
+            eval_df = eval_df.merge(
+                gauss_weights,
+                left_on=coords + ["d_i"],
+                right_on=coords + ["data_label"],
+                how="left",
             )
-            .pivot(index=self.COORDS, columns="d_i", values=["true", "pred"])
+        else:
+            raise ValueError("weights must be None, 'cases', or 'timespace'.")
+
+        return (
+            eval_df.groupby("d_i")
+            .apply(lambda x: scorer(x["true"], x["pred"], sample_weight=x["weight"]))
+            .to_dict()
         )
+
+    def _thresholded_eval_df(
+        self, p_thresh: Optional[float], p_hat_thresh: Optional[float]
+    ) -> pd.DataFrame:
+        eval_df = self._eval_df()
+        if p_thresh:
+            eval_df = eval_df.assign(true=np.where(eval_df["p(d_i)"] >= p_thresh, 1, 0))
+        else:
+            eval_df = eval_df.rename(columns={"p(d_i)": "true"})
+
+        if p_hat_thresh:
+            eval_df = eval_df.assign(pred=np.where(eval_df["p^(d_i)"] >= p_hat_thresh, 1, 0))
+        else:
+            eval_df = eval_df.rename(columns={"p^(d_i)": "pred"})
+        return eval_df
 
     def class_based_conf_mat(
         self,
@@ -296,6 +301,9 @@ class Score(DataPrepareMixin, _ScoreBase):
         p_hat_thresh = p_hat_thresh or (1 / len(self.DATA_LABELS))
 
         thresholded_eval = self._thresholded_eval_df(p_thresh, p_hat_thresh)
+        thresholded_eval = thresholded_eval.pivot(
+            index=self.COORDS, columns="d_i", values=["true", "pred"]
+        )
         if weighted:
             cm = []
             for label in thresholded_eval.columns.levels[1]:
@@ -481,10 +489,14 @@ def check_threshs(metric=None, p_thresh=None, p_hat_thresh=None):
         "brier": ThreshRequired(p_thresh=True, p_hat_thresh=False),
         "auc": ThreshRequired(p_thresh=True, p_hat_thresh=False),
         "sensitivity": ThreshRequired(p_thresh=True, p_hat_thresh=True),
+        "recall": ThreshRequired(p_thresh=True, p_hat_thresh=True),
+        "tpr": ThreshRequired(p_thresh=True, p_hat_thresh=True),
         "specificity": ThreshRequired(p_thresh=True, p_hat_thresh=True),
+        "tnr": ThreshRequired(p_thresh=True, p_hat_thresh=True),
         "matthews": ThreshRequired(p_thresh=True, p_hat_thresh=True),
         "r2": ThreshRequired(p_thresh=False, p_hat_thresh=False),
         "mse": ThreshRequired(p_thresh=False, p_hat_thresh=False),
+        "mae": ThreshRequired(p_thresh=False, p_hat_thresh=False)
     }
     try:
         required_tresh = required_treshs[metric]
@@ -496,26 +508,53 @@ def check_threshs(metric=None, p_thresh=None, p_hat_thresh=None):
     required_tresh.check_threshs_correct(p_thresh=p_thresh, p_hat_thresh=p_hat_thresh)
 
 
-def _sensitivity(true, pred):
-    tn, fp, fn, tp = confusion_matrix(true, pred).ravel()
+def _sensitivity(true, pred, sample_weight):
+    tn, fp, fn, tp = confusion_matrix(true, pred, sample_weight=sample_weight).ravel()
     return tp / (tp + fn)
 
 
-def _specificity(true, pred):
-    tn, fp, fn, tp = confusion_matrix(true, pred).ravel()
+def _specificity(true, pred, sample_weight):
+    tn, fp, fn, tp = confusion_matrix(true, pred, sample_weight=sample_weight).ravel()
     return tn / (tn + fp)
 
 
-def score(cases, signals, metric, p_thresh=None, p_hat_thresh=None):
-    check_threshs(metric, p_thresh, p_hat_thresh)
+def _auc(true, pred, sample_weight):
+    fpr, tpr, _ = sk_metrics.roc_curve(true, pred, sample_weight=sample_weight)
+    return sk_metrics.auc(fpr, tpr)
+
+
+def score(
+    cases: pd.DataFrame,
+    signals: pd.DataFrame,
+    metric: sk_metrics,
+    threshsold_true: Optional[float] = None,
+    threshsold_pred: Optional[float] = None,
+    weights: Optional[str] = None,
+    gauss_dims: Optional[list] = None,
+    covariance_diag: Optional[list[float]] = None,
+    time_axis: Optional[str] = None,
+):
+    check_threshs(metric, threshsold_true, threshsold_pred)
     metrics = {
         "f1": sk_metrics.f1_score,
         "brier": sk_metrics.brier_score_loss,
-        "auc": sk_metrics.auc,
+        "auc": _auc,
         "sensitivity": _sensitivity,
+        "recall": _sensitivity,
+        "tpr": _sensitivity,
         "specificity": _specificity,
+        "tnr": _specificity,
         "matthews": sk_metrics.matthews_corrcoef,
         "r2": sk_metrics.r2_score,
         "mse": sk_metrics.mean_squared_error,
+        "mae": sk_metrics.mean_absolute_error,
     }
-    return Score(cases, signals).calc_score(metrics[metric])
+    return Score(cases, signals).calc_score(
+        metrics[metric],
+        threshsold_true,
+        threshsold_pred,
+        weights,
+        gauss_dims,
+        covariance_diag,
+        time_axis,
+    )
