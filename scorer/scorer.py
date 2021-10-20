@@ -11,9 +11,9 @@ from sklearn.metrics import confusion_matrix, multilabel_confusion_matrix
 
 
 class DataPrepareMixin:
-    """A class to check input and impute input data for Scorer class."""
+    """A class to check input and impute input data for Score class."""
 
-    def __init__(self, cases, signals):
+    def __init__(self, cases: pd.DataFrame, signals: pd.DataFrame) -> None:
         self.cases = cases
         self.signals = signals
         self.MUST_HAVE_LABELS = {"endemic", "non_case"}
@@ -23,14 +23,14 @@ class DataPrepareMixin:
         self.SIGNALS_LABELS = self.signals["signal_label"].unique()
         self.DATA_LABELS = self.cases["data_label"].unique()
 
-    def _extract_coords(self, cases) -> list[str]:
+    def _extract_coords(self, cases: pd.DataFrame) -> list[str]:
         return list(cases.columns[~cases.columns.isin(["data_label", "value"])])
 
-    def _prepare_cases(self, cases):
+    def _prepare_cases(self, cases: pd.DataFrame) -> pd.DataFrame:
         cases_correct = self._check_cases_correctness(cases)
         return self._impute_non_case(cases_correct)
 
-    def _check_cases_correctness(self, cases_correct) -> None:
+    def _check_cases_correctness(self, cases_correct: pd.DataFrame) -> pd.DataFrame:
         if cases_correct.isna().any(axis=None) == True:
             raise ValueError("Cases DataFrame must not contain any NaN values.")
 
@@ -64,15 +64,15 @@ class DataPrepareMixin:
         )
         return pd.concat([cases, non_cases], ignore_index=True)
 
-    def _prepare_signals(self, signals, cases):
+    def _prepare_signals(self, signals: pd.DataFrame, cases: pd.DataFrame) -> pd.DataFrame:
         signals_correct = self._check_signals_correctness(signals, cases)
         return self._impute_signals(signals_correct, cases)
 
     def _check_signals_correctness(
         self,
-        signals_correct,
-        cases,
-    ) -> None:
+        signals_correct: pd.DataFrame,
+        cases: pd.DataFrame,
+    ) -> pd.DataFrame:
         if not (
             pd.api.types.is_float_dtype(signals_correct["value"])
             and ((1 >= signals_correct["value"]) & (signals_correct["value"] >= 0)).all()
@@ -93,7 +93,7 @@ class DataPrepareMixin:
         return signals_correct
 
     def _impute_signals(
-        self, signals: pd.DataFrame, cases: pd.DataFrame, agg_function="min"
+        self, signals: pd.DataFrame, cases: pd.DataFrame, agg_function: Optional[str] = "min"
     ) -> pd.DataFrame:
         """Calculates signals for endemic and non cases when they are missing."""
         assigns = self._column_imputation(signals)
@@ -135,6 +135,8 @@ class DataPrepareMixin:
 
 
 class _ScoreBase:
+    """Class that contains main logic to calculate p(d_i) and p^(d_i)."""
+
     def _eval_df(self) -> pd.DataFrame:
         """Creates DataFrame with p(d_i | x) and p^(d_i | x)"""
         return self._p_di_given_x().merge(
@@ -318,7 +320,7 @@ class Score(DataPrepareMixin, _ScoreBase):
             )
         return dict(zip(thresholded_eval.columns.levels[1], cm.tolist()))
 
-    def _duplicate_cells_by_cases(self, thresholded_eval, label):
+    def _duplicate_cells_by_cases(self, thresholded_eval: pd.DataFrame, label: str):
         sliced_eval = thresholded_eval.loc[:, (slice(None), label)]
         cases_per_cell_exceeding_one = (
             self.cases.query("data_label==@label")["value"]
@@ -334,6 +336,8 @@ class Score(DataPrepareMixin, _ScoreBase):
 
 
 class EpiMetrics(DataPrepareMixin):
+    """A class to calculate epidemiologically relevant metrics."""
+
     def __init__(
         self,
         cases: pd.DataFrame,
@@ -381,7 +385,7 @@ class EpiMetrics(DataPrepareMixin):
         return (1 - delays_per_label / D).clip(0, 1)
 
     @staticmethod
-    def _calc_delay(df) -> int:
+    def _calc_delay(df: pd.DataFrame) -> int:
         max_delay = len(df)
         # should ideally work with gauss weighting
         first_case_idx = (df["value_cases"] == 1).argmax()
@@ -449,7 +453,7 @@ class EpiMetrics(DataPrepareMixin):
             dfs.append(df)
         return pd.concat(dfs).drop(columns="value")
 
-    def _all_true_after_first_true(self, df, time_axis):
+    def _all_true_after_first_true(self, df: pd.DataFrame, time_axis: "str"):
         mask = df.groupby(time_axis).agg({"value": "any"}).rename(columns={"value": "time_mask"})
         mask_len = len(mask)
         if mask["time_mask"].sum() == 0:
@@ -467,7 +471,9 @@ class ThreshRequired:
     p_thresh: bool
     p_hat_thresh: bool
 
-    def check_threshs_correct(self, p_thresh: Optional[float], p_hat_thresh: Optional[float]):
+    def check_threshs_correct(
+        self, p_thresh: Optional[float], p_hat_thresh: Optional[float]
+    ) -> None:
         actual = (p_thresh != None, p_hat_thresh != None)
         threshs_correct = actual == (self.p_thresh, self.p_hat_thresh)
         if not threshs_correct:
@@ -475,7 +481,7 @@ class ThreshRequired:
                 f"This metric {self._thresh_text(self.p_thresh)} p_thresh and {self._thresh_text(self.p_hat_thresh)} p_hat_thresh."
             )
 
-    def _thresh_text(self, thresh):
+    def _thresh_text(self, thresh: bool):
         if thresh:
             thresh_text = "requires"
         else:
@@ -483,7 +489,9 @@ class ThreshRequired:
         return thresh_text
 
 
-def check_threshs(metric=None, p_thresh=None, p_hat_thresh=None):
+def check_threshs(
+    metric: str, p_thresh: Optional[float] = None, p_hat_thresh: Optional[float] = None
+):
     required_treshs = {
         "f1": ThreshRequired(p_thresh=True, p_hat_thresh=True),
         "brier": ThreshRequired(p_thresh=True, p_hat_thresh=False),
@@ -493,10 +501,15 @@ def check_threshs(metric=None, p_thresh=None, p_hat_thresh=None):
         "tpr": ThreshRequired(p_thresh=True, p_hat_thresh=True),
         "specificity": ThreshRequired(p_thresh=True, p_hat_thresh=True),
         "tnr": ThreshRequired(p_thresh=True, p_hat_thresh=True),
+        "fpr": ThreshRequired(p_thresh=True, p_hat_thresh=True),
+        "fnr": ThreshRequired(p_thresh=True, p_hat_thresh=True),
+        "precision": ThreshRequired(p_thresh=True, p_hat_thresh=True),
+        "ppv": ThreshRequired(p_thresh=True, p_hat_thresh=True),
+        "npv": ThreshRequired(p_thresh=True, p_hat_thresh=True),
         "matthews": ThreshRequired(p_thresh=True, p_hat_thresh=True),
         "r2": ThreshRequired(p_thresh=False, p_hat_thresh=False),
         "mse": ThreshRequired(p_thresh=False, p_hat_thresh=False),
-        "mae": ThreshRequired(p_thresh=False, p_hat_thresh=False)
+        "mae": ThreshRequired(p_thresh=False, p_hat_thresh=False),
     }
     try:
         required_tresh = required_treshs[metric]
@@ -518,9 +531,29 @@ def _specificity(true, pred, sample_weight):
     return tn / (tn + fp)
 
 
+def _fpr(true, pred, sample_weight):
+    tn, fp, fn, tp = confusion_matrix(true, pred, sample_weight=sample_weight).ravel()
+    return fp / (fp + tn)
+
+
+def _fnr(true, pred, sample_weight):
+    tn, fp, fn, tp = confusion_matrix(true, pred, sample_weight=sample_weight).ravel()
+    return fn / (fn + tp)
+
+
 def _auc(true, pred, sample_weight):
     fpr, tpr, _ = sk_metrics.roc_curve(true, pred, sample_weight=sample_weight)
     return sk_metrics.auc(fpr, tpr)
+
+
+def _precision(true, pred, sample_weight):
+    tn, fp, fn, tp = confusion_matrix(true, pred, sample_weight=sample_weight).ravel()
+    return tp / (tp + fp)
+
+
+def _npv(true, pred, sample_weight):
+    tn, fp, fn, tp = confusion_matrix(true, pred, sample_weight=sample_weight).ravel()
+    return tn / (tn + fn)
 
 
 def score(
@@ -544,6 +577,11 @@ def score(
         "tpr": _sensitivity,
         "specificity": _specificity,
         "tnr": _specificity,
+        "fpr": _fpr,
+        "fnr": _fnr,
+        "precision": _precision,
+        "ppv": _precision,
+        "npv": _npv,
         "matthews": sk_metrics.matthews_corrcoef,
         "r2": sk_metrics.r2_score,
         "mse": sk_metrics.mean_squared_error,
@@ -558,3 +596,18 @@ def score(
         covariance_diag,
         time_axis,
     )
+
+
+def conf_matrix(
+    cases: pd.DataFrame,
+    signals: pd.DataFrame,
+    threshsold_true: float,
+    threshsold_pred: float,
+):
+    return Score(cases, signals).class_based_conf_mat(threshsold_true, threshsold_pred)
+
+
+def timeliness(
+    cases: pd.DataFrame, signals: pd.DataFrame, time_axis: str, D: int, signal_threshold: float = 0
+):
+    return EpiMetrics(cases, signals).timeliness(time_axis, D, signal_threshold)
