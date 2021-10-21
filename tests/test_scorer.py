@@ -3,8 +3,8 @@ import json
 import numpy as np
 import pandas as pd
 import pytest
-from scorer import Score, ThreshRequired, score
-from scorer.scorer import check_threshs
+from scorer import Score
+from scorer.api import ThreshRequired, check_threshs, score
 from sklearn import metrics
 
 
