@@ -2,13 +2,13 @@
 
 ## Motivation
 
-In the field of disease outbreak detection, qualitatively different families of algorithms are used such as Farrington Flexible and SaTScan. However, comparing the performance of different algorithm families is not trivial. Inputs and outputs differ vastly differ between them and therefore make a clear quantitative comparison difficult.
+In the field of disease outbreak detection, qualitatively different families of algorithms are used such as Farrington Flexible and SaTScan. However, comparing the performance of different algorithm families is not trivial. Inputs and outputs differ vastly between them and therefore make a clear quantitative comparison difficult.
 
-Our score offers a solution to make formerly non comparable approaches comparable.
+Our score offers a solution to make formerly non-comparable approaches comparable.
 
 ## Installation
 
-To run the notebooks and to be able to use the `Scorer` class, you need to install the packages listed in `env.yml`. If you use conda, simply run
+To run the notebooks and to be able to use our score, you need to install the packages listed in `env.yml`. If you use conda, simply run
 
 ```
 conda env create -f environment.yml
@@ -62,14 +62,47 @@ This is also a `pandas.DataFrame` that should be a subset of the coordinates def
 | 2      | 0        | w_B          | 1     |
 | 2      | 1        | w_B          | 1     |
 
-<!-- #### **Missing Signals**
+### API
 
-THIS SECTION WILL BE USED WHEN WE DECIDE WHETHER THIS IS DONE AUTOMATICALLY OR SHOULD BE DONE MANUALLY
+```python
+import pandas as pd
+from epiquark import conf_matrix, score, timeliness
 
-Finally, we might need to generate two missing signals. In the example above, we see that we only the columns `w_A` and `w_B` but not `w_endemic` and `w_non_case`. There are many such algorithms that don't specifically generate a signal for these `data_labels`. In this case, we need to estimate these signals.
+cases = pd.read_csv("tests/data/paper_example/cases_long.csv")
+signals = pd.read_csv("tests/data/paper_example/imputed_signals_long.csv")
 
-This is done by assuming that if an algorithm has a certain signal $w_{i,j}$ for cell $i,j$ and there are no cases is this cell, `w_non_case` is $1-w_{i,j}$. If this cell contains cases, then `w_endemic` is $1-w_{i,j}$.
+cases.head()
+#     x1   x2 data_label  value
+# 0  0.0  0.0        one      0
+# 1  0.0  1.0        one      0
+# 2  0.0  2.0        one      0
+# 3  0.0  3.0        one      0
+# 4  0.0  4.0        one      0
 
-If we have several signals, we also generate many signals for `w_endemic` and `w_non_case`. In our example, we have two signals, therefore we would generate signals named `_A_endemic`, `_B_endemic`, `_A_non_case`, and `_B_non_case`. How do we aggregate these signals?
+signals.head()
+#     x1   x2 signal_label  value
+# 0  0.0  0.0          w_A    0.0
+# 1  0.0  1.0          w_A    0.0
+# 2  0.0  2.0          w_A    0.0
+# 3  0.0  3.0          w_A    0.0
+# 4  0.0  4.0          w_A    0.0
 
-The `missing_signal_agg` allows to set the aggregation strategy. The default is "min" which would take the lowest signal for `non_case` and `endemic` respectively from all generated signals per cell. -->
+score(cases, signals, "r2")
+# {'endemic': -0.013702460850111953,
+#  'non_case': 0.7996794871794872,
+#  'one': 0.3055555555555556,
+#  'three': -0.7795138888888888,
+#  'two': -0.17753623188405832}
+
+# Some metrics require binary values such as F1. In this case, set thresholds.
+thresholed_metric = score(cases, signals, threshold_true=0.5, threshold_pred=0.5, metric="f1")
+
+# If you want to weight cells with more cases higher than others, use the `weights` parameter.
+case_weighted = score(cases, signals, "r2", weights="cases")
+
+# You can also weight by spatio-temporal accuracy of the detected outbreak. Just assign which column is the time and
+# which is the other weighting dimension.
+timespace_weighted = timespace_weighted = score(
+    cases, signals, "r2", weights="timespace", gauss_dims="x2", time_axis="x1"
+)
+```

@@ -10,8 +10,8 @@ from scipy.stats import multivariate_normal
 from sklearn.metrics import confusion_matrix, multilabel_confusion_matrix
 
 
-class DataLoader:
-    """A class to check input and impute input data for Score class."""
+class _DataLoader:
+    """A class to read, check, and impute data used in this package."""
 
     def __init__(self, cases: pd.DataFrame, signals: pd.DataFrame) -> None:
         self.cases = cases
@@ -36,7 +36,7 @@ class DataLoader:
 
         if "non_case" in cases_correct["data_label"].values:
             raise ValueError(
-                "Please remove entries with label 'non_cases' from cases DataFrame. This label is included automatically and therefore internally reseverd."
+                "Please remove entries with label 'non_cases' from cases DataFrame. This label is included automatically and therefore internally reserved."
             )
 
         if not (
@@ -84,7 +84,7 @@ class DataLoader:
             - set(cases.loc[:, self.COORDS].apply(tuple, axis=1))
             != set()
         ):
-            raise ValueError("Coordinats of 'signals' must be a subset of coordinats of 'cases'.")
+            raise ValueError("Coordinates of 'signals' must be a subset of coordinates of 'cases'.")
 
         if (
             signals_correct.groupby(self.COORDS).size() != signals_correct["signal_label"].nunique()
@@ -103,7 +103,7 @@ class DataLoader:
                 cases.query("data_label=='non_case'")
                 .rename(columns={"value": "non_case"})
                 .drop(columns="data_label")
-            )
+            )  # non_case information needed for column imputation
             missing_signals = (
                 signals.merge(
                     non_case_info,
@@ -134,7 +134,7 @@ class DataLoader:
         return assigns
 
 
-class _ScoreBase(DataLoader):
+class _ScoreBase(_DataLoader):
     """Class that contains main logic to calculate p(d_i) and p^(d_i)."""
 
     def __init__(self, cases, signals) -> None:
@@ -180,7 +180,7 @@ class _ScoreBase(DataLoader):
         )
 
     def _p_hat_di_given_sj_x(self) -> pd.DataFrame:
-        """Calculates p^(d_i | s_j, x) which is algo based."""
+        """Calculates p^(d_i | s_j, x) which depends on the use case."""
         unique_coords = [self.cases[coord].unique() for coord in self.COORDS]
         signal_per_diseases = list(
             product(
@@ -209,7 +209,7 @@ class _ScoreBase(DataLoader):
 
 
 class Score(_ScoreBase):
-    """Algrithm agnostic evaluation for (disease) outbreak detection.
+    """Algorithm agnostic evaluation for (disease) outbreak detection.
 
     The `Scorer` offers epidemiologically meaningful scores given case count
     data of infectious diseases, information on cases linked through an
@@ -230,7 +230,7 @@ class Score(_ScoreBase):
                 Remaining columns define the coordinate system.
                 Coordinates in `cases` is required to be complete.
             signals: Signal with coordinate columns, 'signal_label' column, and 'value' column.
-                Coordinates in `signals` must be a subset of the coordinats in `cases`.
+                Coordinates in `signals` must be a subset of the coordinates in `cases`.
                 Each signal_label must start with 'w_' and 'w_endemic' and 'w_non_case' should be included.
         """
         super().__init__(cases, signals)
@@ -252,12 +252,14 @@ class Score(_ScoreBase):
         elif weights == "cases":
             eval_df = self._apply_case_weighting(eval_df)
         elif weights == "timespace":
-            # Unideal fix for mypy not realising that elif cases checks for not Optional 
+            # Fix due to Optional in calc_score and no Optional in EpiMetrics
             # https://github.com/python/mypy/issues/7268
             _gauss_dims = gauss_dims
             _covariance_diag = covariance_diag
             _time_axis = time_axis
-            eval_df = self._apply_timespace_weighting(eval_df, _gauss_dims, _covariance_diag, _time_axis)
+            eval_df = self._apply_timespace_weighting(
+                eval_df, _gauss_dims, _covariance_diag, _time_axis
+            )
         else:
             raise ValueError("weights must be None, 'cases', or 'timespace'.")
 
@@ -272,16 +274,18 @@ class Score(_ScoreBase):
             self.cases, left_on=self.COORDS + ["d_i"], right_on=self.COORDS + ["data_label"]
         ).rename(columns={"value": "weight"})
 
-    def _apply_timespace_weighting(self, eval_df, gauss_dims, covariance_diag, time_axis) -> pd.DataFrame:
-            epimetrics = EpiMetrics(self.cases.query("data_label!='non_case'"), self.signals)
-            gauss_weights = epimetrics.gauss_weighting(gauss_dims, covariance_diag, time_axis)
-            coords = list(set(epimetrics.COORDS).intersection(set(gauss_weights.columns)))
-            return eval_df.merge(
-                gauss_weights,
-                left_on=coords + ["d_i"],
-                right_on=coords + ["data_label"],
-                how="left",
-            )
+    def _apply_timespace_weighting(
+        self, eval_df, gauss_dims, covariance_diag, time_axis
+    ) -> pd.DataFrame:
+        epimetrics = EpiMetrics(self.cases.query("data_label!='non_case'"), self.signals)
+        gauss_weights = epimetrics.gauss_weighting(gauss_dims, covariance_diag, time_axis)
+        coords = list(set(epimetrics.COORDS).intersection(set(gauss_weights.columns)))
+        return eval_df.merge(
+            gauss_weights,
+            left_on=coords + ["d_i"],
+            right_on=coords + ["data_label"],
+            how="left",
+        )
 
     def _thresholded_eval_df(
         self, p_thresh: Optional[float], p_hat_thresh: Optional[float]
@@ -324,7 +328,9 @@ class Score(_ScoreBase):
             cm_list: list[np.ndarray] = []
             for label in thresholded_eval.columns.levels[1]:
                 duplicated = self._duplicate_cells_by_cases(thresholded_eval, label)
-                cm_list.append(confusion_matrix(duplicated["true"].values, duplicated["pred"].values))
+                cm_list.append(
+                    confusion_matrix(duplicated["true"].values, duplicated["pred"].values)
+                )
             cm: np.ndarray = np.array(cm_list)
 
         else:
@@ -349,7 +355,7 @@ class Score(_ScoreBase):
         return sliced_eval
 
 
-class EpiMetrics(DataLoader):
+class EpiMetrics(_DataLoader):
     """A class to calculate epidemiologically relevant metrics."""
 
     def __init__(
@@ -366,14 +372,14 @@ class EpiMetrics(DataLoader):
                 Remaining columns define the coordinate system.
                 Coordinates in `cases` is required to be complete.
             signals: Signal with coordinate columns, 'signal_label' column, and 'value' column.
-                Coordinates in `signals` must be a subset of the coordinats in `cases`.
+                Coordinates in `signals` must be a subset of the coordinates in `cases`.
                 Each signal_label must start with 'w_' and 'w_endemic' and 'w_non_case' should be included.
         """
         super().__init__(cases, signals)
         self.outbreak_labels = list(set(self.DATA_LABELS) - set(["endemic", "non_case"]))
         self.outbreak_signals = list(set(self.SIGNALS_LABELS) - set(["w_endemic", "w_non_case"]))
 
-    def timeliness(self, time_axis: str, D: int, signal_threshold: float = 0) -> pd.Series:
+    def timeliness(self, time_axis: str, D: int, signal_threshold: float = 0) -> dict[str, float]:
         signals_agg = (
             self.signals.query("signal_label.isin(@self.outbreak_signals)")
             .assign(value=lambda x: np.where(x["value"] > signal_threshold, 1, 0))
@@ -396,7 +402,7 @@ class EpiMetrics(DataLoader):
             .groupby("data_label")
             .apply(self._calc_delay)
         )
-        return (1 - delays_per_label / D).clip(0, 1)
+        return dict((1 - delays_per_label / D).clip(0, 1))
 
     @staticmethod
     def _calc_delay(df: pd.DataFrame) -> int:
@@ -431,27 +437,21 @@ class EpiMetrics(DataLoader):
             covariance_diag = np.diag(np.ones(len(gauss_dims)))
         else:
             covariance_diag = np.diag(covariance_diag)
-        case_mask = self.cases.groupby(gauss_dims + ["data_label"]).agg({"value": "sum"})
-        dim_lengths = [self.cases[col].nunique() for col in gauss_dims]
-        dims = [np.arange(0, dim_length) for dim_length in dim_lengths]
-        dims_long_format = np.array(list(product(*dims)))
 
-        case_coords_dict = {}
-        for data_label, df in case_mask.groupby("data_label"):
-            case_coords = dims_long_format[np.argwhere(df["value"].values > 0).ravel()]
-            case_coords_dict[data_label] = case_coords
+        coords_system = self._gauss_coord_system(gauss_dims)
+        case_coords_dict = self._coords_where_more_than_one_case_per_label(gauss_dims, coords_system)
 
         weights = {}
         for data_label, case_coords in case_coords_dict.items():
             mvns = [multivariate_normal(case_coord, covariance_diag) for case_coord in case_coords]
-            values = [mvn.pdf(dims_long_format) for mvn in mvns]
+            values = [mvn.pdf(coords_system) for mvn in mvns]
             score_weight = np.array(values).sum(axis=0)
             weights[data_label] = score_weight
         melted = pd.DataFrame(weights).melt(
             value_name="weight",
             var_name="data_label",
         )
-        melted.loc[:, gauss_dims] = np.vstack([dims_long_format] * len(self.DATA_LABELS))
+        melted.loc[:, gauss_dims] = np.vstack([coords_system] * len(self.DATA_LABELS))
         if time_axis:
             time_mask = self._time_mask(time_axis)
             melted = melted.merge(time_mask, on=gauss_dims + ["data_label"], how="right")
@@ -459,6 +459,19 @@ class EpiMetrics(DataLoader):
             return melted
         else:
             return melted
+
+    def _gauss_coord_system(self, gauss_dims: list[str]) -> np.ndarray:
+        dim_lengths = [self.cases[col].nunique() for col in gauss_dims]
+        dim_ranges = [np.arange(0, dim_length) for dim_length in dim_lengths]
+        return np.array(list(product(*dim_ranges)))
+    
+    def _coords_where_more_than_one_case_per_label(self, gauss_dims, coords_system):
+        case_mask = self.cases.groupby(gauss_dims + ["data_label"]).agg({"value": "sum"})
+        case_coords_dict = {}
+        for data_label, df in case_mask.groupby("data_label"):
+            case_coords = coords_system[np.argwhere(df["value"].values > 0).ravel()]
+            case_coords_dict[data_label] = case_coords
+        return case_coords_dict
 
     def _time_mask(self, time_axis: str) -> pd.DataFrame:
         dfs = []
