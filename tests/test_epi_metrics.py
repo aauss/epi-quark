@@ -2,7 +2,7 @@ from os import makedirs
 import numpy as np
 import pandas as pd
 import pytest
-from scorer import EpiMetrics, Score
+from epiquark import EpiMetrics, Score
 
 
 @pytest.fixture
@@ -14,10 +14,8 @@ def paper_example_epimetric(shared_datadir) -> Score:
 
 def test_timeliness(paper_example_epimetric: EpiMetrics) -> None:
     timeliness = paper_example_epimetric.timeliness("x2", 4)
-    timeliness_expected = pd.Series(
-        [0.0, 0.0, 0.0], index=pd.Index(["one", "three", "two"], name="data_label")
-    )
-    pd.testing.assert_series_equal(timeliness, timeliness_expected)
+    timeliness_expected = {"one": 0.0, "three": 0.0, "two": 0.0}
+    timeliness == timeliness_expected
 
 
 def test_calc_delay() -> None:
