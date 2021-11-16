@@ -260,6 +260,3 @@ def timeliness(
         Timeliness score per data label.
     """
     return EpiMetrics(cases, signals).timeliness(time_axis, D, signal_threshold)
-
-
-

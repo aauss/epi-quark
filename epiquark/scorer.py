@@ -439,7 +439,9 @@ class EpiMetrics(_DataLoader):
             covariance_diag = np.diag(covariance_diag)
 
         coords_system = self._gauss_coord_system(gauss_dims)
-        case_coords_dict = self._coords_where_more_than_one_case_per_label(gauss_dims, coords_system)
+        case_coords_dict = self._coords_where_more_than_one_case_per_label(
+            gauss_dims, coords_system
+        )
 
         weights = {}
         for data_label, case_coords in case_coords_dict.items():
@@ -464,7 +466,7 @@ class EpiMetrics(_DataLoader):
         dim_lengths = [self.cases[col].nunique() for col in gauss_dims]
         dim_ranges = [np.arange(0, dim_length) for dim_length in dim_lengths]
         return np.array(list(product(*dim_ranges)))
-    
+
     def _coords_where_more_than_one_case_per_label(self, gauss_dims, coords_system):
         case_mask = self.cases.groupby(gauss_dims + ["data_label"]).agg({"value": "sum"})
         case_coords_dict = {}

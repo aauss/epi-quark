@@ -10,6 +10,7 @@ def paper_example_score(shared_datadir) -> Score:
     signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
     return Score(cases, signals)
 
+
 def compare_dicts_with_nas(result, expected) -> None:
     for k, v in expected.items():
         np.testing.assert_equal(result[k], v)
