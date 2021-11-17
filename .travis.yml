@@ -12,22 +12,22 @@ before_cache:
 
 before_install:
   # Caches the conda installation and env across builds.
-  - if test -e $HOME/miniconda/bin; then
-      echo "miniconda already installed.";
-    else
-      echo "Installing miniconda.";
-      rm -rf $HOME/miniconda;
-      mkdir -p $HOME/download;
-      wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $HOME/download/miniconda.sh;
-      bash $HOME/download/miniconda.sh -b -p $HOME/miniconda;
-      export PATH="$HOME/miniconda/bin:$PATH";
-      hash -r;
-      conda config --set always_yes yes --set changeps1 no;
-      conda update -q conda;
-      conda config --add channels conda-forge;
-      conda info -a;
-      conda env create -f environment.yml;
-    fi
+  # - if test -e $HOME/miniconda/bin; then
+  #     echo "miniconda already installed.";
+  #   else
+    # echo "Installing miniconda.";
+    # rm -rf $HOME/miniconda;
+    # mkdir -p $HOME/download;
+    # wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O $HOME/download/miniconda.sh;
+    # bash $HOME/download/miniconda.sh -b -p $HOME/miniconda;
+    # export PATH="$HOME/miniconda/bin:$PATH";
+    # hash -r;
+    # conda config --set always_yes yes --set changeps1 no;
+    conda update -q conda;
+    conda config --add channels conda-forge;
+    conda info -a;
+    conda env create -f environment.yml;
+    # fi
 
 install:
   - export PATH="$HOME/miniconda/bin:$PATH"
