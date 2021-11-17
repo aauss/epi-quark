@@ -14,6 +14,7 @@ before_install:
   # Caches the conda installation and env across builds.
   - if test -e $HOME/miniconda/bin; then
       echo "miniconda already installed.";
+      export PATH="$HOME/miniconda/bin:$PATH";
       conda env update --name epi-quark --file environment.yml --prune;
     else
       echo "Installing miniconda.";
