@@ -4,6 +4,7 @@
 <a href="https://codecov.io/gh/aauss/epi-quark">
   <img src="https://codecov.io/gh/aauss/epi-quark/branch/master/graph/badge.svg?token=U7VTC00G71"/>
 </a>
+<a href="https://lgtm.com/projects/g/aauss/epi-quark/alerts/"><img alt="Total alerts" src="https://img.shields.io/lgtm/alerts/g/aauss/epi-quark.svg?logo=lgtm&logoWidth=18"/></a>
 
 # Algorithm agnostic evaluation for (disease) outbreak detection
 
