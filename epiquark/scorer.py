@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from itertools import product
 from typing import Callable, Optional
 from warnings import warn
@@ -31,12 +30,15 @@ class _DataLoader:
         return self._impute_non_case(cases_correct)
 
     def _check_cases_correctness(self, cases_correct: pd.DataFrame) -> pd.DataFrame:
-        if cases_correct.isna().any(axis=None) == True:
+        if cases_correct.isna().any(axis=None):
             raise ValueError("Cases DataFrame must not contain any NaN values.")
 
         if "non_case" in cases_correct["data_label"].values:
             raise ValueError(
-                "Please remove entries with label 'non_cases' from cases DataFrame. This label is included automatically and therefore internally reserved."
+                (
+                    "Please remove entries with label 'non_cases' from cases DataFrame. "
+                    "This label is included automatically and therefore internally reserved."
+                )
             )
 
         if not (
@@ -226,12 +228,13 @@ class Score(_ScoreBase):
         Args:
             cases: Case numbers with coordinate columns, 'data_label' column, and 'value' column.
                 'data_label' should contain (outbreak) labels. Must contain 'endemic' and must
-                not contain data label 'non_case'. 'value' column contains case numbers per cell and data_label.
-                Remaining columns define the coordinate system.
+                not contain data label 'non_case'. 'value' column contains case numbers
+                per cell and data_label. Remaining columns define the coordinate system.
                 Coordinates in `cases` is required to be complete.
             signals: Signal with coordinate columns, 'signal_label' column, and 'value' column.
                 Coordinates in `signals` must be a subset of the coordinates in `cases`.
-                Each signal_label must start with 'w_' and 'w_endemic' and 'w_non_case' should be included.
+                Each signal_label must start with 'w_' and 'w_endemic' and 'w_non_case'
+                should be included.
         """
         super().__init__(cases, signals)
 
@@ -368,12 +371,13 @@ class EpiMetrics(_DataLoader):
         Args:
             cases: Case numbers with coordinate columns, 'data_label' column, and 'value' column.
                 'data_label' should contain (outbreak) labels. Must contain 'endemic' and must
-                not contain data label 'non_case'. 'value' column contains case numbers per cell and data_label.
-                Remaining columns define the coordinate system.
+                not contain data label 'non_case'. 'value' column contains case numbers per cell
+                and data_label. Remaining columns define the coordinate system.
                 Coordinates in `cases` is required to be complete.
             signals: Signal with coordinate columns, 'signal_label' column, and 'value' column.
                 Coordinates in `signals` must be a subset of the coordinates in `cases`.
-                Each signal_label must start with 'w_' and 'w_endemic' and 'w_non_case' should be included.
+                Each signal_label must start with 'w_' and 'w_endemic' and 'w_non_case'
+                should be included.
         """
         super().__init__(cases, signals)
         self.outbreak_labels = list(set(self.DATA_LABELS) - set(["endemic", "non_case"]))
@@ -410,7 +414,8 @@ class EpiMetrics(_DataLoader):
         # should ideally work with gauss weighting
         first_case_idx = (df["value_cases"] == 1).argmax()
         first_signal_idx = (df["value_signals"] == 1).argmax()
-        # erst delay berechnen, über den delay die bedingung (ist zwischen 0 und D) prüfen und dann timeliness zurückgeben
+        # erst delay berechnen, über den delay die bedingung (ist zwischen 0 und D) prüfen
+        #  und dann timeliness zurückgeben
         if (df["value_cases"].sum() == 0) or (df["value_signals"].sum() == 0):
             return max_delay
         elif first_signal_idx < first_case_idx:
@@ -488,7 +493,7 @@ class EpiMetrics(_DataLoader):
         if mask["time_mask"].sum() == 0:
             mask.loc[:, "time_mask"] = np.zeros(mask_len)
         else:
-            first_true_idx = np.argmax(mask["time_mask"] == True)
+            first_true_idx = np.argmax(mask["time_mask"] == True)   # NOQA
             mask.loc[:, "time_mask"] = np.hstack(
                 (np.zeros(first_true_idx), np.ones(mask_len - first_true_idx))
             )

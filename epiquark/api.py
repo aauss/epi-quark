@@ -16,11 +16,14 @@ class _ThreshRequired:
     def check_threshs_correct(
         self, p_thresh: Optional[float], p_hat_thresh: Optional[float]
     ) -> None:
-        actual = (p_thresh != None, p_hat_thresh != None)
+        actual = (p_thresh is not None, p_hat_thresh is not None)
         threshs_correct = actual == (self.p_thresh, self.p_hat_thresh)
         if not threshs_correct:
             raise ValueError(
-                f"This metric {self._thresh_text(self.p_thresh)} p_thresh and {self._thresh_text(self.p_hat_thresh)} p_hat_thresh."
+                (
+                    f"This metric {self._thresh_text(self.p_thresh)} p_thresh "
+                    f"and {self._thresh_text(self.p_hat_thresh)} p_hat_thresh."
+                )
             )
 
     def _thresh_text(self, thresh: bool):
@@ -55,15 +58,22 @@ def score(
     Args:
         cases: This DataFrame must contain the following columns:
 
-            - ``data_label``. Is the class per outbreak. Must contain ``endemic`` and must not contain ``non-case``
+            - ``data_label``. Is the class per outbreak. Must contain ``endemic``
+              and must not contain ``non-case``
             - ``value``. This is the amount of cases in the respective cell
-            - Each other column in the DataFrame is treated as a coordinate where each row is one single cell
+            - Each other column in the DataFrame is treated as a coordinate
+              where each row is one single cell
+
         signals: This DataFrame must contain the following columns:
 
-            - ``signal_label``. Is the class per signal. Must contain ``endemic`` and must not contain ``non-case`` but can contain ``w_endemic`` and ``w_non-case``
+            - ``signal_label``. Is the class per signal. Must contain ``endemic`` and
+              must not contain ``non-case`` but can contain ``w_endemic`` and ``w_non-case``
             - ``value``. This is the signal strength
-            - Each other column in the DataFrame is treated as a coordinate where each row is one single cell
-        metric: Specifies metric to compare :math:`p(d_i|x)` and :math:`\hat{p}(d_i|x)`. Possible options are:
+            - Each other column in the DataFrame is treated as a coordinate
+              where each row is one single cell
+
+        metric: Specifies metric to compare :math:`p(d_i|x)` and :math:`\hat{p}(d_i|x)`.
+        Possible options are:
 
             - `'f1'`
             - `'brier'`
@@ -82,12 +92,17 @@ def score(
             - `'r2'`
             - `'mse'` (mean squared error)
             - `'mae'` (mean absolute error)
-        threshold_true: To binarize :math:`p(d_i|x)`. , the true probability per disease given cell.
-        threshold_pred: To binarize :math:`\hat{p}(d_i|x)`, the predicted probability per disease given cell.
-        weights: Assigns weight to :math:`p(d_i|x)` and :math:`\hat{p}(d_i|x)` by  either 'cases' or 'timespace'. If None, no weighting is applied.
-        gauss_dims: Only valid if weight is 'timespace'. Assigns over which coordinate cells spatial weighting should happen.
-        covariance_diag: Only valid if weight is 'timespace'. Specifies the n-dim. Gaussian covariance.
-        time_axis: Only valid if weight is 'timespace'. Assigns over which coordinates temporal weighting should happen.
+        threshold_true: To binarize :math:`p(d_i|x)`, the true probability per disease given cell.
+        threshold_pred: To binarize :math:`\hat{p}(d_i|x)`, the predicted
+                        probability per disease given cell.
+        weights: Assigns weight to :math:`p(d_i|x)` and :math:`\hat{p}(d_i|x)` by either
+                 'cases' or 'timespace'. If None, no weighting is applied.
+        gauss_dims: Only valid if weight is 'timespace'. Assigns over which coordinate cells
+                    spatial weighting should happen.
+        covariance_diag: Only valid if weight is 'timespace'.
+                         Specifies the n-dim. Gaussian covariance.
+        time_axis: Only valid if weight is 'timespace'. Assigns over which coordinates
+                   temporal weighting should happen.
 
     Returns:
         Scores per ``data_label``.
@@ -147,9 +162,12 @@ def _check_threshs(
     }
     try:
         required_tresh = required_treshs[metric]
-    except KeyError as e:
+    except KeyError:
         raise KeyError(
-            f"This metric is not recognized. Please use one of the following: {', '.join(required_treshs.keys())}"
+            (
+                "This metric is not recognized. "
+                f"Please use one of the following: {', '.join(required_treshs.keys())}"
+            )
         )
 
     required_tresh.check_threshs_correct(p_thresh=p_thresh, p_hat_thresh=p_hat_thresh)
@@ -196,7 +214,7 @@ def conf_matrix(
     threshold_true: float,
     threshold_pred: float,
 ) -> dict[str, list[list[int]]]:
-    """Calculate epidemiologically meaningful confusion matrices.
+    r"""Calculate epidemiologically meaningful confusion matrices.
 
     Given case countdata of infectious diseases, information on cases linked through an
     outbreak, signals for outbreaks generated by outbreak detection algorithms, a cell-grid based
@@ -205,18 +223,23 @@ def conf_matrix(
     Args:
         cases: This DataFrame must contain the following columns:
 
-            - ``data_label``. Is the class per outbreak. Must contain ``endemic`` and must not contain ``non-case``
+            - ``data_label``. Is the class per outbreak. Must contain ``endemic`` and
+              must not contain ``non-case``
             - ``value``. This is the amount of cases in the respective cell
-            - Each other column in the DataFrame is treated as a coordinate where each row is one single cell
+            - Each other column in the DataFrame is treated as a coordinate where each row is one
+              single cell
 
         signals: This DataFrame must contain the following columns:
 
-            - ``signal_label``. Is the class per signal. Must contain ``endemic`` and must not contain ``non-case`` but can contain ``w_endemic`` and ``w_non-case``
+            - ``signal_label``. Is the class per signal. Must contain ``endemic`` and must not
+              contain ``non-case`` but can contain ``w_endemic`` and ``w_non-case``
             - ``value``. This is the signal strength
-            - Each other column in the DataFrame is treated as a coordinate where each row is one single cell
+            - Each other column in the DataFrame is treated as a coordinate where each row is
+              one single cell
 
-        threshold_true: To binarize :math:`p(d_i|x)`. , the true probability per disease given cell.
-        threshold_pred: To binarize :math:`\hat{p}(d_i|x)`, the predicted probability per disease given cell.
+        threshold_true: To binarize :math:`p(d_i|x)`, the true probability per disease given cell.
+        threshold_pred: To binarize :math:`\hat{p}(d_i|x)`, the predicted probability
+                        per disease given cell.
 
     Returns:
         Confusion matrix per data label.
@@ -230,31 +253,39 @@ def timeliness(
     r"""Calculates the timeliness of the detection of outbreaks.
 
     Timeliness is calculated per data label and is defines as:
-    
+
     .. math::
 
         p_{time} = \begin{cases}
           1 -s/D     & \text{if } s \leq D \text{,}\\
           0,         & \text{otherwise.}
         \end{cases}
-    
-    Where :math:`s` is the amount of elapsed cells before detecting an outbreak and :math:`D` is the maximum amount of elapsed cells that we want to allow.
+
+    Where :math:`s` is the amount of elapsed cells before detecting an outbreak and :math:`D`
+           is the maximum amount of elapsed cells that we want to allow.
 
     Args:
         cases: This DataFrame must contain the following columns:
 
-            - ``data_label``. Is the class per outbreak. Must contain ``endemic`` and must not contain ``non-case``
+            - ``data_label``. Is the class per outbreak. Must contain ``endemic``
+              and must not contain ``non-case``
             - ``value``. This is the amount of cases in the respective cell
-            - Each other column in the DataFrame is treated as a coordinate where each row is one single cell
+            - Each other column in the DataFrame is treated as a coordinate
+              where each row is one single cell
         signals: This DataFrame must contain the following columns:
 
-            - ``signal_label``. Is the class per signal. Must contain ``endemic`` and must not contain ``non-case`` but can contain ``w_endemic`` and ``w_non-case``
+            - ``signal_label``. Is the class per signal. Must contain ``endemic``
+              and must not contain ``non-case`` but can contain ``w_endemic`` and ``w_non-case``
             - ``value``. This is the signal strength
-            - Each other column in the DataFrame is treated as a coordinate where each row is one single cell
+            - Each other column in the DataFrame is treated as a coordinate
+              where each row is one single cell
 
         time_axis: Column name of the time dimension/axis
-        D: Is the maximum allowed delay to detect an outbreak. If an outbreak is detected at :math:`s>D` where :math:`s` is the number of cells that have elapsed since the outbreak started, then the timeliness is :math:`0` for that data label.
-        signal_threshold: Indicates at which threshold a generated signal is counted as one. Binarized signal is used to quantify timeliness.
+        D: Is the maximum allowed delay to detect an outbreak. If an outbreak is detected
+           at :math:`s>D` where :math:`s` is the number of cells that have elapsed since
+           the outbreak started, then the timeliness is :math:`0` for that data label.
+        signal_threshold: Indicates at which threshold a generated signal is counted as one.
+                          Binarized signal is used to quantify timeliness.
 
     Returns:
         Timeliness score per data label.

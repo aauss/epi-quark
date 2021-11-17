@@ -36,10 +36,10 @@ install:
   - source activate epi-quark
 
 script:
-  # - black --check epiquark/ tests/
-  # - mypy --package epysurv
-  # - flake8 epysurv
-  - PYTHONPATH=. pytest --cov=epysurv tests/
+  - black --check epiquark/ tests/
+  - mypy --package epiquark
+  - flake8 epiquark
+  - PYTHONPATH=. pytest --cov=epiquark tests/
 
 after_success:
   - codecov
