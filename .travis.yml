@@ -39,6 +39,7 @@ script:
   - black --check epiquark/ tests/
   - mypy --package epiquark
   - flake8 epiquark
+  - isort --check epiquark/ tests/
   - PYTHONPATH=. pytest --cov=epiquark tests/
 
 after_success:

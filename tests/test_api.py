@@ -3,6 +3,7 @@ import json
 import numpy as np
 import pandas as pd
 import pytest
+
 from epiquark import Score
 from epiquark.api import _check_threshs, _ThreshRequired, conf_matrix, score, timeliness
 

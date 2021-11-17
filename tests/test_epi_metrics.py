@@ -1,7 +1,9 @@
 from os import makedirs
+
 import numpy as np
 import pandas as pd
 import pytest
+
 from epiquark import EpiMetrics, Score
 
 

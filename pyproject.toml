@@ -3,3 +3,9 @@ line-length = 100
 
 [tool.mypy]
 ignore_missing_imports = true
+
+[tool.isort]
+known_first_party = 'epiquark'
+line_length = 100
+multi_line_output = 1
+include_trailing_comma = "true"
