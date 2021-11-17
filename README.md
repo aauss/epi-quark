@@ -1,6 +1,9 @@
 <a href="https://app.travis-ci.com/aauss/epi-quark.svg?branch=master">
         <img src="https://img.shields.io/circleci/project/github/badges/shields/master" alt="build status"></a>
 <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
+<a href="https://codecov.io/gh/aauss/epi-quark">
+  <img src="https://codecov.io/gh/aauss/epi-quark/branch/master/graph/badge.svg?token=U7VTC00G71"/>
+</a>
 
 # Algorithm agnostic evaluation for (disease) outbreak detection
 
