@@ -493,7 +493,7 @@ class EpiMetrics(_DataLoader):
         if mask["time_mask"].sum() == 0:
             mask.loc[:, "time_mask"] = np.zeros(mask_len)
         else:
-            first_true_idx = np.argmax(mask["time_mask"] == True)   # NOQA
+            first_true_idx = np.argmax(mask["time_mask"] == True)  # NOQA
             mask.loc[:, "time_mask"] = np.hstack(
                 (np.zeros(first_true_idx), np.ones(mask_len - first_true_idx))
             )

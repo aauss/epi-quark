@@ -16,6 +16,8 @@ dependencies:
   - sphinx=4.2.0
   - pip:
     - black==21.7b0
+    - flake8==4.0.1
+    - mypy==0.910
     - nbsphinx==0.8.7
     - pydata-sphinx-theme==0.7.1
     - pytest==6.2.4
