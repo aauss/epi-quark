@@ -16,7 +16,7 @@ Our score offers a solution to make formerly non-comparable approaches comparabl
 
 ## Installation
 
-To run the notebooks and to be able to use our score, you need to install the packages listed in `env.yml`. If you use conda, simply run
+To run the notebooks and to be able to use our score, you need to install the packages listed in `environment.yml`. If you use conda, simply run
 
 ```
 conda env create -f environment.yml
