@@ -1,4 +1,3 @@
-# Do not use Travis Python to save some time.
 language: generic
 
 cache:
@@ -15,7 +14,7 @@ before_install:
   - if test -e $HOME/miniconda/bin; then
       echo "miniconda already installed.";
       export PATH="$HOME/miniconda/bin:$PATH";
-      conda env update --name epi-quark --file environment.yml --prune;
+      conda env update --name epi-quark --file env-dev.yml --prune;
     else
       echo "Installing miniconda.";
       rm -rf $HOME/miniconda;
@@ -28,7 +27,7 @@ before_install:
       conda update -q conda;
       conda config --add channels conda-forge;
       conda info -a;
-      conda env create -f environment.yml;
+      conda env create -f env-dev.yml;
     fi
 
 install:
@@ -39,8 +38,8 @@ install:
 
 script:
   - black --check epiquark/ tests/
-  - mypy --package epiquark
-  - flake8 epiquark
+  - mypy --package epiquark --package tests
+  - flake8 epiquark/ tests/
   - isort --check epiquark/ tests/
   - PYTHONPATH=. pytest --cov=epiquark tests/
 
