@@ -4,35 +4,34 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from epiquark import Score
 from epiquark.api import _check_threshs, _ThreshRequired, conf_matrix, score, timeliness
 
-from .utils import compare_dicts_with_nas, paper_example_score
+from .conftest import compare_dicts_with_nas
 
 
 def test_thresh_check_class() -> None:
     tr = _ThreshRequired(p_thresh=True, p_hat_thresh=True)
     with pytest.raises(
-        ValueError, match=f"This metric requires p_thresh and requires p_hat_thresh."
+        ValueError, match="This metric requires p_thresh and requires p_hat_thresh."
     ):
         tr.check_threshs_correct(None, 0.4)
 
     tr = _ThreshRequired(p_thresh=True, p_hat_thresh=False)
     with pytest.raises(
-        ValueError, match=f"This metric requires p_thresh and must not contain p_hat_thresh."
+        ValueError, match="This metric requires p_thresh and must not contain p_hat_thresh."
     ):
         tr.check_threshs_correct(None, 0.4)
 
     tr = _ThreshRequired(p_thresh=False, p_hat_thresh=True)
     with pytest.raises(
-        ValueError, match=f"This metric must not contain p_thresh and requires p_hat_thresh."
+        ValueError, match="This metric must not contain p_thresh and requires p_hat_thresh."
     ):
         tr.check_threshs_correct(1, 0.4)
 
     tr = _ThreshRequired(p_thresh=False, p_hat_thresh=False)
     with pytest.raises(
         ValueError,
-        match=f"This metric must not contain p_thresh and must not contain p_hat_thresh.",
+        match="This metric must not contain p_thresh and must not contain p_hat_thresh.",
     ):
         tr.check_threshs_correct(None, 0.4)
 
@@ -46,7 +45,7 @@ def test_thresh_check_func():
         _check_threshs("not a metric", p_thresh=1, p_hat_thresh=0.4)
 
 
-def test_scorer_api_no_weighting(shared_datadir, paper_example_score: Score) -> None:
+def test_scorer_api_no_weighting(shared_datadir) -> None:
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -241,7 +240,7 @@ def test_scorer_api_no_weighting(shared_datadir, paper_example_score: Score) -> 
     )
 
 
-def test_scorer_api_case_weighting(shared_datadir, paper_example_score: Score) -> None:
+def test_scorer_api_case_weighting(shared_datadir) -> None:
     assert (
         score(
             pd.read_csv("tests/data/paper_example/cases_long.csv"),
@@ -445,7 +444,7 @@ def test_scorer_api_case_weighting(shared_datadir, paper_example_score: Score) -
     compare_dicts_with_nas(result, expected)
 
 
-def test_scorer_api_timespace_weighting(shared_datadir, paper_example_score: Score) -> None:
+def test_scorer_api_timespace_weighting(shared_datadir) -> None:
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -690,7 +689,7 @@ def test_scorer_api_timespace_weighting(shared_datadir, paper_example_score: Sco
     )
 
 
-def test_scorer_api_errors(shared_datadir, paper_example_score: Score) -> None:
+def test_scorer_api_errors(shared_datadir) -> None:
     with pytest.raises(ValueError, match="weights must be None, 'cases', or 'timespace'."):
         assert score(
             pd.read_csv("tests/data/paper_example/cases_long.csv"),
@@ -700,7 +699,7 @@ def test_scorer_api_errors(shared_datadir, paper_example_score: Score) -> None:
         )
 
 
-def test_conf_matrix_api(shared_datadir, paper_example_score: Score) -> None:
+def test_conf_matrix_api(shared_datadir) -> None:
     confusion_matrix = json.dumps(
         conf_matrix(
             pd.read_csv("tests/data/paper_example/cases_long.csv"),

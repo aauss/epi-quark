@@ -1,17 +1,7 @@
-from os import makedirs
-
 import numpy as np
 import pandas as pd
-import pytest
 
-from epiquark import EpiMetrics, Score
-
-
-@pytest.fixture
-def paper_example_epimetric(shared_datadir) -> Score:
-    cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
-    signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
-    return EpiMetrics(cases, signals)
+from epiquark import EpiMetrics
 
 
 def test_timeliness(paper_example_epimetric: EpiMetrics) -> None:

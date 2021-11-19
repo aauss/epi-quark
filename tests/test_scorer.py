@@ -1,14 +1,10 @@
 import json
 
-import numpy as np
 import pandas as pd
 import pytest
 from sklearn import metrics
 
 from epiquark import Score
-from epiquark.api import _check_threshs, _ThreshRequired, conf_matrix, score, timeliness
-
-from .utils import paper_example_score
 
 
 def test_non_case_imputation(shared_datadir, paper_example_score: Score) -> None:
@@ -111,7 +107,10 @@ def test_case_data_error(shared_datadir) -> None:
     cases_non_case_label.at[0, "data_label"] = "non_case"
     with pytest.raises(
         ValueError,
-        match="Please remove entries with label 'non_cases' from cases DataFrame. This label is included automatically and therefore internally reserved.",
+        match=(
+            "Please remove entries with label 'non_cases' from cases DataFrame. "
+            "This label is included automatically and therefore internally reserved."
+        ),
     ):
         Score(cases_non_case_label, signals)
 
