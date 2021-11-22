@@ -13,3 +13,6 @@
 __pycache__/
 docs/build/
 coverage.xml
+build/*
+dist/*
+*.egg-info/
