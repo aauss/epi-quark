@@ -7,30 +7,48 @@
 <a href="https://lgtm.com/projects/g/aauss/epi-quark/alerts/"><img alt="Total alerts" src="https://img.shields.io/lgtm/alerts/g/aauss/epi-quark.svg?logo=lgtm&logoWidth=18"/></a>
 <a href="https://opensource.org/licenses/MIT"><img alt="Code style: black" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
 
-
 # Algorithm agnostic evaluation for (disease) outbreak detection
 
 ## Motivation
 
-In the field of disease outbreak detection, qualitatively different families of algorithms are used such as Farrington Flexible and SaTScan. However, comparing the performance of different algorithm families is not trivial. Inputs and outputs differ vastly between them and therefore make a clear quantitative comparison difficult.
+In the field of disease outbreak detection, qualitatively different families of algorithms are equally used such as Farrington Flexible and SaTScan. However, comparing the performance of different algorithm families is not trivial. Inputs and outputs differ vastly between algorithms and therefore make a clear quantitative comparison difficult.
 
 Our score offers a solution to make formerly non-comparable approaches comparable.
 
 ## Installation
 
-To run the notebooks and to be able to use our score, you need to install the packages listed in `environment.yml`. If you use conda, simply run
+To run the notebooks, build the docs, run the tests, and to use our score, you need to install the packages listed in `env-dev.yml`. If you use conda, simply run
 
 ```
-conda env create -f environment.yml
+conda env create -f env-dev.yml
 ```
 
 Afterwards, run
 
 ```
-conda activate scoring
+conda activate epi-quark
 ```
 
-to activate the conda environment.
+to activate the conda environment. You should be read to go.
+
+### Docs
+
+If you want to build the documentation, run
+
+```
+cd docs/
+make html
+```
+which will build the sphinx-based documentation. Simply open the `index.html` which will be created and saved under `docs/build/html/index.html`.
+
+### pre-commit
+If you want to test the code before commiting it, you can use `pre-commit` to run all tests set up for this repo.
+
+To uninstall git hook scripts to evaluate your code, run 
+```
+pre-commit install
+```
+This might take a moment. If the setup was successful, your code is tested before you can commit it. You can read more about it [here](https://pre-commit.com/).
 
 ## How to use the scorer
 
