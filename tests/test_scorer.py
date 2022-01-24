@@ -114,6 +114,40 @@ def test_case_data_error(shared_datadir) -> None:
     ):
         Score(cases_non_case_label, signals)
 
+    cases_missing_endemic_label = cases.copy()
+    cases_missing_endemic_label = cases_missing_endemic_label.loc[
+        cases_missing_endemic_label.loc[:, "data_label"] != "endemic"
+    ]
+    with pytest.raises(
+        ValueError,
+        match=("Please add the label 'endemic' to your cases DataFrame."),
+    ):
+        Score(cases_missing_endemic_label, signals)
+
+    cases_missing_label = cases.copy()
+    cases_missing_label = cases_missing_label.iloc[1:]
+    with pytest.raises(
+        ValueError,
+        match=(
+            "The set of all data labels in the cases DataFrame "
+            "must equal the available data labels per cell, ie., per coordinate."
+        ),
+    ):
+        Score(cases_missing_label, signals)
+
+    cases_additional_label = cases.copy()
+    cases_additional_label = cases_additional_label.append(
+        pd.DataFrame({"x1": [0.0], "x2": [0.0], "data_label": ["additional_label"], "value": [5]})
+    )
+    with pytest.raises(
+        ValueError,
+        match=(
+            "The set of all data labels in the cases DataFrame "
+            "must equal the available data labels per cell, ie., per coordinate."
+        ),
+    ):
+        Score(cases_additional_label, signals)
+
 
 def test_signal_coord_error(shared_datadir) -> None:
     cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
@@ -133,21 +167,21 @@ def test_signals_float_error(shared_datadir) -> None:
     signals_negative_value = signals.copy()
     signals_negative_value.at[0, "value"] = -1.2
     with pytest.raises(
-        ValueError, match="'values' in signal DataFrame must be floats between 0 and 1."
+        ValueError, match="'values' in signals DataFrame must be floats between 0 and 1."
     ):
         Score(cases, signals_negative_value)
 
     signals_high_values = signals.copy()
     signals_high_values.at[0, "value"] = 2.0
     with pytest.raises(
-        ValueError, match="'values' in signal DataFrame must be floats between 0 and 1."
+        ValueError, match="'values' in signals DataFrame must be floats between 0 and 1."
     ):
         Score(cases, signals_high_values)
 
     signals_not_float = signals.copy()
     signals_not_float.loc[:, "value"] = 1
     with pytest.raises(
-        ValueError, match="'values' in signal DataFrame must be floats between 0 and 1."
+        ValueError, match="'values' in signals DataFrame must be floats between 0 and 1."
     ):
         Score(cases, signals_not_float)
 
@@ -158,7 +192,25 @@ def test_signals_equal_number_error(shared_datadir) -> None:
 
     signals = signals.iloc[1:]
     with pytest.raises(
-        ValueError, match="Each coordinate must contain the same amount of signals."
+        ValueError,
+        match=(
+            "The set of all signal labels in the signals DataFrame "
+            "must equal the available signals labels per cell, ie., per coordinate."
+        ),
+    ):
+        Score(cases, signals)
+
+    signals = signals.append(
+        pd.DataFrame(
+            {"x1": [0.0], "x2": [0.0], "signal_label": ["additional_label"], "value": [0.5]}
+        )
+    )
+    with pytest.raises(
+        ValueError,
+        match=(
+            "The set of all signal labels in the signals DataFrame "
+            "must equal the available signals labels per cell, ie., per coordinate."
+        ),
     ):
         Score(cases, signals)
 

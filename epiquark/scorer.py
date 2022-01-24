@@ -29,11 +29,11 @@ class _DataLoader:
         cases_correct = self._check_cases_correctness(cases)
         return self._impute_non_case(cases_correct)
 
-    def _check_cases_correctness(self, cases_correct: pd.DataFrame) -> pd.DataFrame:
-        if cases_correct.isna().any(axis=None):
+    def _check_cases_correctness(self, cases: pd.DataFrame) -> pd.DataFrame:
+        if cases.isna().any(axis=None):
             raise ValueError("Cases DataFrame must not contain any NaN values.")
 
-        if "non_case" in cases_correct["data_label"].values:
+        if "non_case" in cases["data_label"].values:
             raise ValueError(
                 (
                     "Please remove entries with label 'non_cases' from cases DataFrame. "
@@ -41,13 +41,23 @@ class _DataLoader:
                 )
             )
 
-        if not (
-            pd.api.types.is_integer_dtype(cases_correct["value"])
-            and (cases_correct["value"] >= 0).all()
-        ):
+        if "endemic" not in cases["data_label"].values:
+            raise ValueError(("Please add the label 'endemic' to your cases DataFrame."))
+
+        if not (pd.api.types.is_integer_dtype(cases["value"]) and (cases["value"] >= 0).all()):
             raise ValueError("Case counts must be non-negative, whole numbers.")
 
-        return cases_correct
+        unique_data_label_not_eq_data_labels_per_coord = cases.groupby(self.COORDS)[
+            "data_label"
+        ].apply(lambda x: list(x) != list(cases["data_label"].unique()))
+        if unique_data_label_not_eq_data_labels_per_coord.any():
+            raise ValueError(
+                (
+                    "The set of all data labels in the cases DataFrame "
+                    "must equal the available data labels per cell, ie., per coordinate."
+                )
+            )
+        return cases
 
     def _impute_non_case(self, cases: pd.DataFrame) -> pd.DataFrame:
         """Imputes case numbers for non_case column.
@@ -255,7 +265,7 @@ class Score(_ScoreBase):
         elif weights == "cases":
             eval_df = self._apply_case_weighting(eval_df)
         elif weights == "timespace":
-            # Fix due to Optional in calc_score and no Optional in EpiMetrics
+            # Underscore is fix due to Optional in calc_score and no Optional in EpiMetrics
             # https://github.com/python/mypy/issues/7268
             _gauss_dims = gauss_dims
             _covariance_diag = covariance_diag
