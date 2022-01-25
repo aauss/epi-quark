@@ -170,13 +170,18 @@ class _ScoreBase(_DataLoader):
         )
 
     def _p_hat_di(self) -> pd.DataFrame:
-        """Calculates p^(d_i | x) = sum( p^(d_i| s_j, x) p^(s_j, x) )"""
-        p_hat_di = self._p_hat_di_given_sj_x().merge(
-            self._p_hat_sj_given_x(),
+        """Calculates p^(d_i | x) = sum( p(d_i| s_j, x) p(s_j, x) )"""
+        p_hat_di = self._p_di_given_sj_x().merge(
+            self._p_sj_given_x(),
             on=self.COORDS + ["s_j"],
         )
-        p_hat_di.loc[:, "p^(d_i)"] = p_hat_di["posterior"] * p_hat_di["prior"]
-        p_hat_di = p_hat_di.groupby(self.COORDS + ["d_i"]).agg({"p^(d_i)": sum}).reset_index()
+        p_hat_di.loc[:, "p(d_i,s_j|x)"] = p_hat_di["posterior"] * p_hat_di["prior"]
+        p_hat_di = (
+            p_hat_di.groupby(self.COORDS + ["d_i"])
+            .agg({"p(d_i,s_j|x)": sum})
+            .rename(columns={"p(d_i,s_j|x)": "p^(d_i)"})
+            .reset_index()
+        )
         return p_hat_di
 
     def _p_di_given_x(self) -> pd.DataFrame:
@@ -188,8 +193,8 @@ class _ScoreBase(_DataLoader):
             .rename(columns={"data_label": "d_i", "value": "p(d_i)"})
         )
 
-    def _p_hat_sj_given_x(self) -> pd.DataFrame:
-        """p^ (s_j|x) = w(s, x) / sum_s (w(s,x))"""
+    def _p_sj_given_x(self) -> pd.DataFrame:
+        """p (s_j|x) = w(s, x) / sum_s (w(s,x))"""
         return (
             self.signals.assign(
                 prior=lambda x: (x.value / x.groupby(self.COORDS)["value"].transform("sum")).fillna(
@@ -201,8 +206,9 @@ class _ScoreBase(_DataLoader):
             .loc[:, self.COORDS + ["prior", "s_j"]]
         )
 
-    def _p_hat_di_given_sj_x(self) -> pd.DataFrame:
-        """Calculates p^(d_i | s_j, x) which depends on the use case."""
+    def _p_di_given_sj_x(self) -> pd.DataFrame:
+        # TODO x is not needed. Merge should work through data and signal label only
+        """Calculates p(d_i | s_j, x) which depends on the use case."""
         unique_coords = [self.cases[coord].unique() for coord in self.COORDS]
         signal_per_diseases = list(
             product(

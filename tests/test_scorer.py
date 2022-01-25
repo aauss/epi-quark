@@ -31,16 +31,16 @@ def test_p_di_given_x(shared_datadir, paper_example_score: Score) -> None:
     pd.testing.assert_frame_equal(p_di_given_x, p_di_given_x_expected, check_dtype=False)
 
 
-def test_p_hat_sj_given_x(shared_datadir, paper_example_score: Score) -> None:
-    p_hat_sj_given_x = paper_example_score._p_hat_sj_given_x()
+def test_p_sj_given_x(shared_datadir, paper_example_score: Score) -> None:
+    p_hat_sj_given_x = paper_example_score._p_sj_given_x()
     p_hat_sj_given_x_expected = pd.read_csv(
         shared_datadir / "paper_example/p_hat_sj_given_x_long.csv"
     )
     pd.testing.assert_frame_equal(p_hat_sj_given_x, p_hat_sj_given_x_expected, check_dtype=False)
 
 
-def test_p_hat_di_given_sj_x(shared_datadir, paper_example_score: Score) -> None:
-    p_hat_di_given_sj_x = paper_example_score._p_hat_di_given_sj_x()
+def test_p_di_given_sj_x(shared_datadir, paper_example_score: Score) -> None:
+    p_hat_di_given_sj_x = paper_example_score._p_di_given_sj_x()
     p_hat_di_given_sj_x_expected = pd.read_csv(
         shared_datadir / "paper_example/p_hat_di_given_sj_x.csv"
     )
