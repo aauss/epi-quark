@@ -5,7 +5,6 @@ import pytest
 from sklearn import metrics
 
 from epiquark import Score
-from epiquark.utils import impute_signals
 
 
 def test_non_case_imputation(shared_datadir, paper_example_score: Score) -> None:
@@ -13,15 +12,6 @@ def test_non_case_imputation(shared_datadir, paper_example_score: Score) -> None
     imputed = paper_example_score._impute_non_case(cases)
 
     imputed_expected = pd.read_csv(shared_datadir / "paper_example/non_case_imputed_long.csv")
-    pd.testing.assert_frame_equal(imputed, imputed_expected, check_dtype=False)
-
-
-def test_signal_imputation(shared_datadir, paper_example_score: Score) -> None:
-    cases = pd.read_csv(shared_datadir / "paper_example/non_case_imputed_long.csv")
-    signals = pd.read_csv(shared_datadir / "paper_example/signals_long.csv")
-    imputed = impute_signals(signals, cases, coords=["x1", "x2"])
-
-    imputed_expected = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
     pd.testing.assert_frame_equal(imputed, imputed_expected, check_dtype=False)
 
 
@@ -81,14 +71,16 @@ def test_score(paper_example_score: Score) -> None:
     }
 
 
-def test_case_data_error(shared_datadir) -> None:
-    cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
-    signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
+def test_check_no_nans_exist(paper_example_dfs) -> None:
+    cases, signals = paper_example_dfs
 
-    cases_with_nans = cases.copy()
-    cases_with_nans.loc[2, "value"] = pd.NA
+    cases.loc[2, "value"] = pd.NA
     with pytest.raises(ValueError, match="Cases DataFrame must not contain any NaN values."):
-        Score(cases_with_nans, signals)
+        Score(cases, signals)
+
+
+def test_check_cases_pos_ints(paper_example_dfs) -> None:
+    cases, signals = paper_example_dfs
 
     cases_negative = cases.copy()
     cases_negative.at[2, "value"] = -1
@@ -100,8 +92,11 @@ def test_case_data_error(shared_datadir) -> None:
     with pytest.raises(ValueError, match="Case counts must be non-negative, whole numbers."):
         Score(cases_float, signals)
 
-    cases_non_case_label = cases.copy()
-    cases_non_case_label.at[0, "data_label"] = "non_case"
+
+def test_check_non_cases_not_include(paper_example_dfs) -> None:
+    cases, signals = paper_example_dfs
+
+    cases.at[0, "data_label"] = "non_case"
     with pytest.raises(
         ValueError,
         match=(
@@ -109,17 +104,22 @@ def test_case_data_error(shared_datadir) -> None:
             "This label is included automatically and therefore internally reserved."
         ),
     ):
-        Score(cases_non_case_label, signals)
+        Score(cases, signals)
 
-    cases_missing_endemic_label = cases.copy()
-    cases_missing_endemic_label = cases_missing_endemic_label.loc[
-        cases_missing_endemic_label.loc[:, "data_label"] != "endemic"
-    ]
+
+def test_check_non_cases_not_included(paper_example_dfs) -> None:
+    cases, signals = paper_example_dfs
+
+    cases = cases.loc[cases.loc[:, "data_label"] != "endemic"]
     with pytest.raises(
         ValueError,
         match=("Please add the label 'endemic' to your cases DataFrame."),
     ):
-        Score(cases_missing_endemic_label, signals)
+        Score(cases, signals)
+
+
+def test_check_data_label_consitency(paper_example_dfs) -> None:
+    cases, signals = paper_example_dfs
 
     cases_missing_label = cases.copy()
     cases_missing_label = cases_missing_label.iloc[1:]
@@ -146,9 +146,8 @@ def test_case_data_error(shared_datadir) -> None:
         Score(cases_additional_label, signals)
 
 
-def test_signal_empty_coord_error(shared_datadir) -> None:
-    cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
-    signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
+def test_signal_empty_coord_error(paper_example_dfs) -> None:
+    cases, signals = paper_example_dfs
 
     signals.loc[(signals.loc[:, "x1"] == 0) & (signals.loc[:, "x2"] == 0), "value"] = 0
     with pytest.raises(
@@ -158,9 +157,8 @@ def test_signal_empty_coord_error(shared_datadir) -> None:
         Score(cases, signals)
 
 
-def test_signal_coord_point_identity(shared_datadir) -> None:
-    cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
-    signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
+def test_check_coords_points_are_case_subset(paper_example_dfs) -> None:
+    cases, signals = paper_example_dfs
 
     missing_coords = signals[~((signals["x1"] == 0) & (signals["x2"] == 0))]
     with pytest.raises(
@@ -170,9 +168,8 @@ def test_signal_coord_point_identity(shared_datadir) -> None:
         Score(cases, missing_coords)
 
 
-def test_signal_missing_labels(shared_datadir) -> None:
-    cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
-    signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
+def test_signal_missing_labels(paper_example_dfs) -> None:
+    cases, signals = paper_example_dfs
 
     no_endemic_label = signals.loc[signals.loc[:, "signal_label"] != "endemic"]
     with pytest.raises(
@@ -189,9 +186,8 @@ def test_signal_missing_labels(shared_datadir) -> None:
         Score(cases, no_non_case_label)
 
 
-def test_signals_float_error(shared_datadir) -> None:
-    cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
-    signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
+def test_signals_float_error(paper_example_dfs) -> None:
+    cases, signals = paper_example_dfs
 
     signals_negative_value = signals.copy()
     signals_negative_value.at[0, "value"] = -1.2
@@ -215,9 +211,8 @@ def test_signals_float_error(shared_datadir) -> None:
         Score(cases, signals_not_float)
 
 
-def test_signals_equal_number_error(shared_datadir) -> None:
-    cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
-    signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
+def test_check_signal_label_consitency(paper_example_dfs) -> None:
+    cases, signals = paper_example_dfs
 
     signals = signals.iloc[1:]
     with pytest.raises(
@@ -244,9 +239,8 @@ def test_signals_equal_number_error(shared_datadir) -> None:
         Score(cases, signals)
 
 
-def test_signals_coordinate_columns(shared_datadir) -> None:
-    cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
-    signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
+def test_check_case_coords_subset_of_signal_coords(paper_example_dfs) -> None:
+    cases, signals = paper_example_dfs
 
     signals = signals.rename(columns={"x1": "x3"})
     with pytest.raises(
