@@ -185,21 +185,15 @@ class _ScoreBase(_DataLoader):
         return p_hat_di
 
     def _p_di_given_x(self) -> pd.DataFrame:
-        return (
-            self.cases.assign(
-                value=lambda x: x.value / x.groupby(self.COORDS)["value"].transform("sum").values
-            )
-            .fillna(0)
-            .rename(columns={"data_label": "d_i", "value": "p(d_i)"})
-        )
+        return self.cases.assign(
+            value=lambda x: x.value / x.groupby(self.COORDS)["value"].transform("sum").values
+        ).rename(columns={"data_label": "d_i", "value": "p(d_i)"})
 
     def _p_sj_given_x(self) -> pd.DataFrame:
         """p (s_j|x) = w(s, x) / sum_s (w(s,x))"""
         return (
             self.signals.assign(
-                prior=lambda x: (x.value / x.groupby(self.COORDS)["value"].transform("sum")).fillna(
-                    0
-                ),
+                prior=lambda x: (x.value / x.groupby(self.COORDS)["value"].transform("sum")),
                 s_j=lambda x: x["signal_label"],
             )
             .drop(columns=["signal_label", "value"])
