@@ -30,9 +30,18 @@ class _DataLoader:
         return self._impute_non_case(cases_correct)
 
     def _check_cases_correctness(self, cases: pd.DataFrame) -> pd.DataFrame:
+        self._check_no_nans_exist(cases)
+        self._check_non_cases_not_included(cases)
+        self._check_endemic_exists(cases)
+        self._check_cases_pos_ints(cases)
+        self._check_data_label_consitency(cases)
+        return cases
+
+    def _check_no_nans_exist(self, cases) -> None:
         if cases.isna().any(axis=None):
             raise ValueError("Cases DataFrame must not contain any NaN values.")
 
+    def _check_non_cases_not_included(self, cases) -> None:
         if "non_case" in cases["data_label"].values:
             raise ValueError(
                 (
@@ -41,12 +50,15 @@ class _DataLoader:
                 )
             )
 
+    def _check_endemic_exists(self, cases) -> None:
         if "endemic" not in cases["data_label"].values:
             raise ValueError(("Please add the label 'endemic' to your cases DataFrame."))
 
+    def _check_cases_pos_ints(self, cases) -> None:
         if not (pd.api.types.is_integer_dtype(cases["value"]) and (cases["value"] >= 0).all()):
             raise ValueError("Case counts must be non-negative, whole numbers.")
 
+    def _check_data_label_consitency(self, cases) -> None:
         unique_data_label_not_eq_data_labels_per_coord = cases.groupby(self.COORDS)[
             "data_label"
         ].apply(lambda x: list(x) != list(cases["data_label"].unique()))
@@ -57,7 +69,6 @@ class _DataLoader:
                     "must equal the available data labels per cell."
                 )
             )
-        return cases
 
     def _impute_non_case(self, cases: pd.DataFrame) -> pd.DataFrame:
         """Imputes case numbers for non_case column.
@@ -87,7 +98,6 @@ class _DataLoader:
         self._check_signals_floats_between_zero_one(signals)
         self._check_must_have_signals(signals)
         self._check_empty_cells(signals)
-
         return signals
 
     def _check_case_coords_subset_of_signal_coords(self, signals) -> None:
