@@ -161,6 +161,18 @@ def test_signal_empty_coord_error(shared_datadir) -> None:
         Score(cases, signals)
 
 
+def test_signal_coord_point_identity(shared_datadir) -> None:
+    cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
+    signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
+
+    missing_coords = signals[~((signals["x1"] == 0) & (signals["x2"] == 0))]
+    with pytest.raises(
+        ValueError,
+        match=("Coordinates of cases must be subset of signals' coordinates"),
+    ):
+        Score(cases, missing_coords)
+
+
 def test_signal_missing_labels(shared_datadir) -> None:
     cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
     signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")

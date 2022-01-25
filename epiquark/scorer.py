@@ -18,7 +18,7 @@ class _DataLoader:
         self.MUST_HAVE_LABELS = {"endemic", "non_case"}
         self.COORDS = self._extract_coords(cases)
         self.cases = self._prepare_cases(cases)
-        self.signals = self._prepare_signals(signals, self.cases)
+        self.signals = self._check_signals_correctness(signals, self.cases)
         self.SIGNALS_LABELS = self.signals["signal_label"].unique()
         self.DATA_LABELS = self.cases["data_label"].unique()
 
@@ -76,31 +76,21 @@ class _DataLoader:
         )
         return pd.concat([cases, non_cases], ignore_index=True)
 
-    def _prepare_signals(self, signals: pd.DataFrame, cases: pd.DataFrame) -> pd.DataFrame:
-        signals_correct = self._check_signals_correctness(signals, cases)
-        return self._impute_signals(signals_correct, cases)
-
     def _check_signals_correctness(
         self,
         signals: pd.DataFrame,
         cases: pd.DataFrame,
     ) -> pd.DataFrame:
         self._check_case_coords_subset_of_signal_coords(signals)
+        self._check_coords_points_are_identical(signals, cases)
         self._check_signal_label_consitency(signals)
         self._check_signals_floats_between_zero_one(signals)
         self._check_must_have_signals(signals)
         self._check_empty_cells(signals)
 
-        # Check signal correctness:
-        # 1. cases coordinates are all there in signals (test columns and then cells)
-        # 2. for each coordinate, all signals have w (value) defined
-        # (check signal string label to
-        # be identical for each coordinate)
-        # 4. endemic and non_case signals must exist and named exactly like
-
         return signals
 
-    def _check_case_coords_subset_of_signal_coords(self, signals):
+    def _check_case_coords_subset_of_signal_coords(self, signals) -> None:
         try:
             signals[self.COORDS]
         except KeyError:
@@ -111,7 +101,13 @@ class _DataLoader:
                 )
             )
 
-    def _check_signal_label_consitency(self, signals):
+    def _check_coords_points_are_identical(self, signals, cases) -> None:
+        unique_case_coords = set(cases[self.COORDS].apply(tuple, axis=1))
+        unique_signale_coords = set(signals[self.COORDS].apply(tuple, axis=1))
+        if not (unique_case_coords - unique_signale_coords == set()):
+            raise ValueError("Coordinates of cases must be subset of signals' coordinates")
+
+    def _check_signal_label_consitency(self, signals) -> None:
         unique_signal_label_not_eq_signal_labels_per_coord = signals.groupby(self.COORDS)[
             "signal_label"
         ].apply(lambda x: list(x) != list(signals["signal_label"].unique()))
@@ -123,14 +119,14 @@ class _DataLoader:
                 )
             )
 
-    def _check_signals_floats_between_zero_one(self, signals):
+    def _check_signals_floats_between_zero_one(self, signals) -> None:
         if not (
             pd.api.types.is_float_dtype(signals["value"])
             and ((1 >= signals["value"]) & (signals["value"] >= 0)).all()
         ):
             raise ValueError("'values' in signals DataFrame must be floats between 0 and 1.")
 
-    def _check_must_have_signals(self, signals):
+    def _check_must_have_signals(self, signals) -> None:
         if ("endemic" not in signals["signal_label"].values) or (
             "non_case" not in signals["signal_label"].values
         ):
@@ -138,7 +134,7 @@ class _DataLoader:
                 "Signals DataFrame must contain 'endemic' and 'non_case' signal_label."
             )
 
-    def _check_empty_cells(self, signals):
+    def _check_empty_cells(self, signals) -> None:
         if (signals.groupby(self.COORDS).agg({"value": "sum"}).values == 0).any():
             raise ValueError(
                 (
