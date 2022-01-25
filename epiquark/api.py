@@ -3,7 +3,6 @@ from typing import Optional
 
 import pandas as pd
 import sklearn.metrics as sk_metrics
-from sklearn.metrics import confusion_matrix
 
 from .scorer import EpiMetrics, Score
 
@@ -174,22 +173,22 @@ def _check_threshs(
 
 
 def _sensitivity(true, pred, sample_weight):
-    tn, fp, fn, tp = confusion_matrix(true, pred, sample_weight=sample_weight).ravel()
+    tn, fp, fn, tp = sk_metrics.confusion_matrix(true, pred, sample_weight=sample_weight).ravel()
     return tp / (tp + fn)
 
 
 def _specificity(true, pred, sample_weight):
-    tn, fp, fn, tp = confusion_matrix(true, pred, sample_weight=sample_weight).ravel()
+    tn, fp, fn, tp = sk_metrics.confusion_matrix(true, pred, sample_weight=sample_weight).ravel()
     return tn / (tn + fp)
 
 
 def _fpr(true, pred, sample_weight):
-    tn, fp, fn, tp = confusion_matrix(true, pred, sample_weight=sample_weight).ravel()
+    tn, fp, fn, tp = sk_metrics.confusion_matrix(true, pred, sample_weight=sample_weight).ravel()
     return fp / (fp + tn)
 
 
 def _fnr(true, pred, sample_weight):
-    tn, fp, fn, tp = confusion_matrix(true, pred, sample_weight=sample_weight).ravel()
+    tn, fp, fn, tp = sk_metrics.confusion_matrix(true, pred, sample_weight=sample_weight).ravel()
     return fn / (fn + tp)
 
 
@@ -199,12 +198,12 @@ def _auc(true, pred, sample_weight):
 
 
 def _precision(true, pred, sample_weight):
-    tn, fp, fn, tp = confusion_matrix(true, pred, sample_weight=sample_weight).ravel()
+    tn, fp, fn, tp = sk_metrics.confusion_matrix(true, pred, sample_weight=sample_weight).ravel()
     return tp / (tp + fp)
 
 
 def _npv(true, pred, sample_weight):
-    tn, fp, fn, tp = confusion_matrix(true, pred, sample_weight=sample_weight).ravel()
+    tn, fp, fn, tp = sk_metrics.confusion_matrix(true, pred, sample_weight=sample_weight).ravel()
     return tn / (tn + fn)
 
 

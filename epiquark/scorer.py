@@ -5,7 +5,6 @@ import numpy as np
 import pandas as pd
 import sklearn.metrics as sk_metrics
 from scipy.stats import multivariate_normal
-from sklearn.metrics import confusion_matrix, multilabel_confusion_matrix
 
 
 class _DataLoader:
@@ -92,7 +91,7 @@ class _DataLoader:
         cases: pd.DataFrame,
     ) -> pd.DataFrame:
         self._check_case_coords_subset_of_signal_coords(signals)
-        self._check_coords_points_are_identical(signals, cases)
+        self._check_coords_points_are_case_subset(signals, cases)
         self._check_signal_label_consitency(signals)
         self._check_signals_floats_between_zero_one(signals)
         self._check_must_have_signals(signals)
@@ -110,7 +109,7 @@ class _DataLoader:
                 )
             )
 
-    def _check_coords_points_are_identical(self, signals, cases) -> None:
+    def _check_coords_points_are_case_subset(self, signals, cases) -> None:
         unique_case_coords = set(cases[self.COORDS].apply(tuple, axis=1))
         unique_signale_coords = set(signals[self.COORDS].apply(tuple, axis=1))
         if not (unique_case_coords - unique_signale_coords == set()):
@@ -346,12 +345,14 @@ class Score(_ScoreBase):
             for label in thresholded_eval.columns.levels[1]:
                 duplicated = self._duplicate_cells_by_cases(thresholded_eval, label)
                 cm_list.append(
-                    confusion_matrix(duplicated["true"].values, duplicated["pred"].values)
+                    sk_metrics.confusion_matrix(
+                        duplicated["true"].values, duplicated["pred"].values
+                    )
                 )
             cm: np.ndarray = np.array(cm_list)
 
         else:
-            cm = multilabel_confusion_matrix(
+            cm = sk_metrics.multilabel_confusion_matrix(
                 thresholded_eval.loc[:, "true"].values,
                 thresholded_eval.loc[:, "pred"].values,
             )
