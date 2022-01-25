@@ -165,14 +165,14 @@ def test_signal_missing_labels(shared_datadir) -> None:
     cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
     signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
 
-    no_endemic_label = signals.loc[signals.loc[:, "signal_label"] != "w_endemic"]
+    no_endemic_label = signals.loc[signals.loc[:, "signal_label"] != "endemic"]
     with pytest.raises(
         ValueError,
         match="Signals DataFrame must contain 'endemic' and 'non_case' signal_label.",
     ):
         Score(cases, no_endemic_label)
 
-    no_non_case_label = signals.loc[signals.loc[:, "signal_label"] != "w_non_case"]
+    no_non_case_label = signals.loc[signals.loc[:, "signal_label"] != "non_case"]
     with pytest.raises(
         ValueError,
         match="Signals DataFrame must contain 'endemic' and 'non_case' signal_label.",

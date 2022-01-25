@@ -131,8 +131,8 @@ class _DataLoader:
             raise ValueError("'values' in signals DataFrame must be floats between 0 and 1.")
 
     def _check_must_have_signals(self, signals):
-        if ("w_endemic" not in signals["signal_label"].values) or (
-            "w_non_case" not in signals["signal_label"].values
+        if ("endemic" not in signals["signal_label"].values) or (
+            "non_case" not in signals["signal_label"].values
         ):
             raise ValueError(
                 "Signals DataFrame must contain 'endemic' and 'non_case' signal_label."
@@ -182,13 +182,13 @@ class _DataLoader:
         self, signals: pd.DataFrame
     ) -> dict[str, Callable[[pd.DataFrame], pd.Series]]:
         assigns = {}
-        if not signals["signal_label"].str.contains("w_endemic").any():
-            assigns["w_endemic"] = lambda x: (1 - x["value"]) * np.logical_xor(x["non_case"], 1)
-            warn("w_endemic is missing and is being imputed.")
+        if not signals["signal_label"].str.contains("endemic").any():
+            assigns["endemic"] = lambda x: (1 - x["value"]) * np.logical_xor(x["non_case"], 1)
+            warn("endemic is missing and is being imputed.")
 
-        if not signals["signal_label"].str.contains("w_non_case").any():
-            assigns["w_non_case"] = lambda x: (1 - x["value"]) * x["non_case"]
-            warn("w_non_case is missing and is being imputed.")
+        if not signals["signal_label"].str.contains("non_case").any():
+            assigns["non_case"] = lambda x: (1 - x["value"]) * x["non_case"]
+            warn("non_case is missing and is being imputed.")
         return assigns
 
 
@@ -231,7 +231,7 @@ class _ScoreBase(_DataLoader):
                 prior=lambda x: (x.value / x.groupby(self.COORDS)["value"].transform("sum")).fillna(
                     0
                 ),
-                s_j=lambda x: x["signal_label"].str.replace("w_", ""),
+                s_j=lambda x: x["signal_label"],
             )
             .drop(columns=["signal_label", "value"])
             .loc[:, self.COORDS + ["prior", "s_j"]]
@@ -245,7 +245,7 @@ class _ScoreBase(_DataLoader):
                 product(*unique_coords),
                 product(
                     self.DATA_LABELS,
-                    [col.replace("w_", "") for col in self.SIGNALS_LABELS],
+                    self.SIGNALS_LABELS,
                 ),
             )
         )
@@ -289,8 +289,7 @@ class Score(_ScoreBase):
                 Coordinates in `cases` is required to be complete.
             signals: Signal with coordinate columns, 'signal_label' column, and 'value' column.
                 Coordinates in `signals` must be a subset of the coordinates in `cases`.
-                Each signal_label must start with 'w_' and 'w_endemic' and 'w_non_case'
-                should be included.
+                'endemic' and 'non_case' signal must be included.
         """
         super().__init__(cases, signals)
 
@@ -432,12 +431,11 @@ class EpiMetrics(_DataLoader):
                 Coordinates in `cases` is required to be complete.
             signals: Signal with coordinate columns, 'signal_label' column, and 'value' column.
                 Coordinates in `signals` must be a subset of the coordinates in `cases`.
-                Each signal_label must start with 'w_' and 'w_endemic' and 'w_non_case'
-                should be included.
+                'endemic' and 'non_case' signal must be included.
         """
         super().__init__(cases, signals)
         self.outbreak_labels = list(set(self.DATA_LABELS) - set(["endemic", "non_case"]))
-        self.outbreak_signals = list(set(self.SIGNALS_LABELS) - set(["w_endemic", "w_non_case"]))
+        self.outbreak_signals = list(set(self.SIGNALS_LABELS) - set(["endemic", "non_case"]))
 
     def timeliness(self, time_axis: str, D: int, signal_threshold: float = 0) -> dict[str, float]:
         signals_agg = (
