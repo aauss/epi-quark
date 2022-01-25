@@ -130,7 +130,7 @@ def test_case_data_error(shared_datadir) -> None:
         ValueError,
         match=(
             "The set of all data labels in the cases DataFrame "
-            "must equal the available data labels per cell, ie., per coordinate."
+            "must equal the available data labels per cell"
         ),
     ):
         Score(cases_missing_label, signals)
@@ -143,21 +143,41 @@ def test_case_data_error(shared_datadir) -> None:
         ValueError,
         match=(
             "The set of all data labels in the cases DataFrame "
-            "must equal the available data labels per cell, ie., per coordinate."
+            "must equal the available data labels per cell"
         ),
     ):
         Score(cases_additional_label, signals)
 
 
-def test_signal_coord_error(shared_datadir) -> None:
+def test_signal_empty_coord_error(shared_datadir) -> None:
     cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
     signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
 
-    signals.at[0, "x1"] = 6
+    signals.loc[(signals.loc[:, "x1"] == 0) & (signals.loc[:, "x2"] == 0), "value"] = 0
     with pytest.raises(
-        ValueError, match="Coordinates of 'signals' must be a subset of coordinates of 'cases'."
+        ValueError,
+        match=("At least one signal per coordinate has to be non-zero in the signals DataFrame."),
     ):
         Score(cases, signals)
+
+
+def test_signal_missing_labels(shared_datadir) -> None:
+    cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
+    signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
+
+    no_endemic_label = signals.loc[signals.loc[:, "signal_label"] != "w_endemic"]
+    with pytest.raises(
+        ValueError,
+        match="Signals DataFrame must contain 'endemic' and 'non_case' signal_label.",
+    ):
+        Score(cases, no_endemic_label)
+
+    no_non_case_label = signals.loc[signals.loc[:, "signal_label"] != "w_non_case"]
+    with pytest.raises(
+        ValueError,
+        match="Signals DataFrame must contain 'endemic' and 'non_case' signal_label.",
+    ):
+        Score(cases, no_non_case_label)
 
 
 def test_signals_float_error(shared_datadir) -> None:
@@ -195,7 +215,7 @@ def test_signals_equal_number_error(shared_datadir) -> None:
         ValueError,
         match=(
             "The set of all signal labels in the signals DataFrame "
-            "must equal the available signals labels per cell, ie., per coordinate."
+            "must equal the available signals labels per cell."
         ),
     ):
         Score(cases, signals)
@@ -209,7 +229,22 @@ def test_signals_equal_number_error(shared_datadir) -> None:
         ValueError,
         match=(
             "The set of all signal labels in the signals DataFrame "
-            "must equal the available signals labels per cell, ie., per coordinate."
+            "must equal the available signals labels per cell."
+        ),
+    ):
+        Score(cases, signals)
+
+
+def test_signals_coordinate_columns(shared_datadir) -> None:
+    cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
+    signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
+
+    signals = signals.rename(columns={"x1": "x3"})
+    with pytest.raises(
+        KeyError,
+        match=(
+            "Not all coordinate columns of the cases DataFrame are contained in the "
+            "signals DataFrame."
         ),
     ):
         Score(cases, signals)

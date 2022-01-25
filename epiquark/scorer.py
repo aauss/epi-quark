@@ -54,7 +54,7 @@ class _DataLoader:
             raise ValueError(
                 (
                     "The set of all data labels in the cases DataFrame "
-                    "must equal the available data labels per cell, ie., per coordinate."
+                    "must equal the available data labels per cell."
                 )
             )
         return cases
@@ -82,32 +82,78 @@ class _DataLoader:
 
     def _check_signals_correctness(
         self,
-        signals_correct: pd.DataFrame,
+        signals: pd.DataFrame,
         cases: pd.DataFrame,
     ) -> pd.DataFrame:
+        self._check_case_coords_subset_of_signal_coords(signals)
+        self._check_signal_label_consitency(signals)
+        self._check_signals_floats_between_zero_one(signals)
+        self._check_must_have_signals(signals)
+        self._check_empty_cells(signals)
+
+        # Check signal correctness:
+        # 1. cases coordinates are all there in signals (test columns and then cells)
+        # 2. for each coordinate, all signals have w (value) defined
+        # (check signal string label to
+        # be identical for each coordinate)
+        # 4. endemic and non_case signals must exist and named exactly like
+
+        return signals
+
+    def _check_case_coords_subset_of_signal_coords(self, signals):
+        try:
+            signals[self.COORDS]
+        except KeyError:
+            raise KeyError(
+                (
+                    "Not all coordinate columns of the cases DataFrame are contained in the "
+                    f"signals DataFrame. It must contain {self.COORDS}"
+                )
+            )
+
+    def _check_signal_label_consitency(self, signals):
+        unique_signal_label_not_eq_signal_labels_per_coord = signals.groupby(self.COORDS)[
+            "signal_label"
+        ].apply(lambda x: list(x) != list(signals["signal_label"].unique()))
+        if unique_signal_label_not_eq_signal_labels_per_coord.any():
+            raise ValueError(
+                (
+                    "The set of all signal labels in the signals DataFrame "
+                    "must equal the available signals labels per cell."
+                )
+            )
+
+    def _check_signals_floats_between_zero_one(self, signals):
         if not (
-            pd.api.types.is_float_dtype(signals_correct["value"])
-            and ((1 >= signals_correct["value"]) & (signals_correct["value"] >= 0)).all()
+            pd.api.types.is_float_dtype(signals["value"])
+            and ((1 >= signals["value"]) & (signals["value"] >= 0)).all()
         ):
-            raise ValueError("'values' in signal DataFrame must be floats between 0 and 1.")
+            raise ValueError("'values' in signals DataFrame must be floats between 0 and 1.")
 
-        if (
-            set(signals_correct.loc[:, self.COORDS].apply(tuple, axis=1))
-            - set(cases.loc[:, self.COORDS].apply(tuple, axis=1))
-            != set()
+    def _check_must_have_signals(self, signals):
+        if ("w_endemic" not in signals["signal_label"].values) or (
+            "w_non_case" not in signals["signal_label"].values
         ):
-            raise ValueError("Coordinates of 'signals' must be a subset of coordinates of 'cases'.")
+            raise ValueError(
+                "Signals DataFrame must contain 'endemic' and 'non_case' signal_label."
+            )
 
-        if (
-            signals_correct.groupby(self.COORDS).size() != signals_correct["signal_label"].nunique()
-        ).any():
-            raise ValueError("Each coordinate must contain the same amount of signals.")
-        return signals_correct
+    def _check_empty_cells(self, signals):
+        if (signals.groupby(self.COORDS).agg({"value": "sum"}).values == 0).any():
+            raise ValueError(
+                (
+                    "At least one signal per coordinate has to be non-zero "
+                    "in the signals DataFrame."
+                )
+            )
 
     def _impute_signals(
         self, signals: pd.DataFrame, cases: pd.DataFrame, agg_function: Optional[str] = "min"
     ) -> pd.DataFrame:
         """Calculates signals for endemic and non cases when they are missing."""
+
+        # TODO: Offer imputation as a helper function for endemic signal. Maybe later
+
         assigns = self._column_imputation(signals)
         aggs = dict.fromkeys(list(assigns), agg_function)
         if len(assigns) > 0:
