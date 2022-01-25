@@ -37,9 +37,9 @@ def test_p_sj_given_x(shared_datadir, paper_example_score: Score) -> None:
     pd.testing.assert_frame_equal(p_sj_given_x, p_sj_given_x_expected, check_dtype=False)
 
 
-def test_p_di_given_sj_x(shared_datadir, paper_example_score: Score) -> None:
-    p_di_given_sj_x = paper_example_score._p_di_given_sj_x()
-    p_di_given_sj_x_expected = pd.read_csv(shared_datadir / "paper_example/p_di_given_sj_x.csv")
+def test_p_di_given_sj(shared_datadir, paper_example_score: Score) -> None:
+    p_di_given_sj_x = paper_example_score._p_di_given_sj()
+    p_di_given_sj_x_expected = pd.read_csv(shared_datadir / "paper_example/p_di_given_sj.csv")
     str_cols = list(p_di_given_sj_x.select_dtypes(exclude="number").columns)
     pd.testing.assert_frame_equal(
         p_di_given_sj_x.sort_values(by=str_cols).reset_index(drop=True),

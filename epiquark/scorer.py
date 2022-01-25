@@ -171,9 +171,9 @@ class _ScoreBase(_DataLoader):
 
     def _p_hat_di(self) -> pd.DataFrame:
         """Calculates p^(d_i | x) = sum( p(d_i| s_j, x) p(s_j, x) )"""
-        p_hat_di = self._p_di_given_sj_x().merge(
+        p_hat_di = self._p_di_given_sj().merge(
             self._p_sj_given_x(),
-            on=self.COORDS + ["s_j"],
+            on="s_j",
         )
         p_hat_di.loc[:, "p(d_i,s_j|x)"] = p_hat_di["posterior"] * p_hat_di["prior"]
         p_hat_di = (
@@ -200,22 +200,17 @@ class _ScoreBase(_DataLoader):
             .loc[:, self.COORDS + ["prior", "s_j"]]
         )
 
-    def _p_di_given_sj_x(self) -> pd.DataFrame:
-        # TODO x is not needed. Merge should work through data and signal label only
-        """Calculates p(d_i | s_j, x) which depends on the use case."""
-        unique_coords = [self.cases[coord].unique() for coord in self.COORDS]
+    def _p_di_given_sj(self) -> pd.DataFrame:
+        """Calculates p(d_i | s_j) which depends on the use case."""
         signal_per_diseases = list(
             product(
-                product(*unique_coords),
-                product(
-                    self.DATA_LABELS,
-                    self.SIGNALS_LABELS,
-                ),
-            )
+                self.DATA_LABELS,
+                self.SIGNALS_LABELS,
+            ),
         )
         df = pd.DataFrame(
-            [tuple_[0] + tuple_[1] for tuple_ in signal_per_diseases],
-            columns=list(self.COORDS) + ["d_i", "s_j"],
+            signal_per_diseases,
+            columns=["d_i", "s_j"],
         )
 
         signal_data_indeces = df.query(
@@ -225,8 +220,8 @@ class _ScoreBase(_DataLoader):
             set(self.DATA_LABELS) - set(self.MUST_HAVE_LABELS)
         )
 
-        non_case_endemic_signal_indeces = df.query("d_i == s_j").index
-        df.loc[non_case_endemic_signal_indeces, "posterior"] = 1
+        df.loc[(df.loc[:, "d_i"] == "endemic") & (df.loc[:, "s_j"] == "endemic"), "posterior"] = 1
+        df.loc[(df.loc[:, "d_i"] == "non_case") & (df.loc[:, "s_j"] == "non_case"), "posterior"] = 1
         return df.fillna(0)
 
 
