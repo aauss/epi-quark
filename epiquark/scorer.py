@@ -237,17 +237,28 @@ class Score(_ScoreBase):
         cases: pd.DataFrame,
         signals: pd.DataFrame,
     ) -> None:
-        """Builds scorer given data.
+        r"""Builds scorer given data.
 
         Args:
-            cases: Case numbers with coordinate columns, 'data_label' column, and 'value' column.
-                'data_label' should contain (outbreak) labels. Must contain 'endemic' and must
-                not contain data label 'non_case'. 'value' column contains case numbers
-                per cell and data_label. Remaining columns define the coordinate system.
-                Coordinates in `cases` is required to be complete.
-            signals: Signal with coordinate columns, 'signal_label' column, and 'value' column.
-                Coordinates in `signals` must be a subset of the coordinates in `cases`.
-                'endemic' and 'non_case' signal must be included.
+            cases: This DataFrame must contain the following columns and no NaNs:
+
+                - ``data_label``. Is the class per outbreak. Must contain ``endemic``
+                and must not contain ``non-case``.
+                - ``value``. This is the amount of cases in the respective cell.
+                This value must be an positive integer.
+                - Each other column in the DataFrame is treated as a coordinate
+                where each row is one single cell. This coordinate system is
+                the evaluation resolution.
+
+            signals: This DataFrame must contain the following columns:
+
+                - ``signal_label``. Is the class per signal. Must contain ``endemic`` and
+                ``non-case``.
+                - ``value``. This is the signal strength :math:`w` and should be :math:`w \in [0,1]`
+                - Each other column in the DataFrame is treated as a coordinate
+                where each row is one single cell. Cases coordinates and cells
+                must be subset of cases coordinates and cells. Cells outside
+                the coordinate system of the cases DataFrame are ignored.
         """
         super().__init__(cases, signals)
 
@@ -381,17 +392,28 @@ class EpiMetrics(_DataLoader):
         cases: pd.DataFrame,
         signals: pd.DataFrame,
     ) -> None:
-        """Builds EpiMetrics given data.
+        r"""Builds EpiMetrics given data.
 
         Args:
-            cases: Case numbers with coordinate columns, 'data_label' column, and 'value' column.
-                'data_label' should contain (outbreak) labels. Must contain 'endemic' and must
-                not contain data label 'non_case'. 'value' column contains case numbers per cell
-                and data_label. Remaining columns define the coordinate system.
-                Coordinates in `cases` is required to be complete.
-            signals: Signal with coordinate columns, 'signal_label' column, and 'value' column.
-                Coordinates in `signals` must be a subset of the coordinates in `cases`.
-                'endemic' and 'non_case' signal must be included.
+            cases: This DataFrame must contain the following columns and no NaNs:
+
+                - ``data_label``. Is the class per outbreak. Must contain ``endemic``
+                and must not contain ``non-case``.
+                - ``value``. This is the amount of cases in the respective cell.
+                This value must be an positive integer.
+                - Each other column in the DataFrame is treated as a coordinate
+                where each row is one single cell. This coordinate system is
+                the evaluation resolution.
+
+            signals: This DataFrame must contain the following columns:
+
+                - ``signal_label``. Is the class per signal. Must contain ``endemic`` and
+                ``non-case``.
+                - ``value``. This is the signal strength :math:`w` and should be :math:`w \in [0,1]`
+                - Each other column in the DataFrame is treated as a coordinate
+                where each row is one single cell. Cases coordinates and cells
+                must be subset of cases coordinates and cells. Cells outside
+                the coordinate system of the cases DataFrame are ignored.
         """
         super().__init__(cases, signals)
         self.outbreak_labels = list(set(self.DATA_LABELS) - set(["endemic", "non_case"]))
