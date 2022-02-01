@@ -221,6 +221,7 @@ class _ScoreBase(_DataLoader):
 
         df.loc[(df.loc[:, "d_i"] == "endemic") & (df.loc[:, "s_j"] == "endemic"), "posterior"] = 1
         df.loc[(df.loc[:, "d_i"] == "non_case") & (df.loc[:, "s_j"] == "non_case"), "posterior"] = 1
+        # Only NAs left are entries where d_i or s_j in ['endemic', 'non_case'] and d_i != s_j
         return df.fillna(0)
 
 
