@@ -1,12 +1,10 @@
 from itertools import product
-from typing import Callable, Optional
-from warnings import warn
+from typing import Optional
 
 import numpy as np
 import pandas as pd
 import sklearn.metrics as sk_metrics
 from scipy.stats import multivariate_normal
-from sklearn.metrics import confusion_matrix, multilabel_confusion_matrix
 
 
 class _DataLoader:
@@ -18,7 +16,7 @@ class _DataLoader:
         self.MUST_HAVE_LABELS = {"endemic", "non_case"}
         self.COORDS = self._extract_coords(cases)
         self.cases = self._prepare_cases(cases)
-        self.signals = self._prepare_signals(signals, self.cases)
+        self.signals = self._check_signals_correctness(signals, self.cases)
         self.SIGNALS_LABELS = self.signals["signal_label"].unique()
         self.DATA_LABELS = self.cases["data_label"].unique()
 
@@ -29,11 +27,20 @@ class _DataLoader:
         cases_correct = self._check_cases_correctness(cases)
         return self._impute_non_case(cases_correct)
 
-    def _check_cases_correctness(self, cases_correct: pd.DataFrame) -> pd.DataFrame:
-        if cases_correct.isna().any(axis=None):
+    def _check_cases_correctness(self, cases: pd.DataFrame) -> pd.DataFrame:
+        self._check_no_nans_exist(cases)
+        self._check_non_cases_not_included(cases)
+        self._check_endemic_exists(cases)
+        self._check_cases_pos_ints(cases)
+        self._check_data_label_consitency(cases)
+        return cases
+
+    def _check_no_nans_exist(self, cases) -> None:
+        if cases.isna().any(axis=None):
             raise ValueError("Cases DataFrame must not contain any NaN values.")
 
-        if "non_case" in cases_correct["data_label"].values:
+    def _check_non_cases_not_included(self, cases) -> None:
+        if "non_case" in cases["data_label"].values:
             raise ValueError(
                 (
                     "Please remove entries with label 'non_cases' from cases DataFrame. "
@@ -41,13 +48,25 @@ class _DataLoader:
                 )
             )
 
-        if not (
-            pd.api.types.is_integer_dtype(cases_correct["value"])
-            and (cases_correct["value"] >= 0).all()
-        ):
+    def _check_endemic_exists(self, cases) -> None:
+        if "endemic" not in cases["data_label"].values:
+            raise ValueError(("Please add the label 'endemic' to your cases DataFrame."))
+
+    def _check_cases_pos_ints(self, cases) -> None:
+        if not (pd.api.types.is_integer_dtype(cases["value"]) and (cases["value"] >= 0).all()):
             raise ValueError("Case counts must be non-negative, whole numbers.")
 
-        return cases_correct
+    def _check_data_label_consitency(self, cases) -> None:
+        unique_data_label_not_eq_data_labels_per_coord = cases.groupby(self.COORDS)[
+            "data_label"
+        ].apply(lambda x: list(x) != list(cases["data_label"].unique()))
+        if unique_data_label_not_eq_data_labels_per_coord.any():
+            raise ValueError(
+                (
+                    "The set of all data labels in the cases DataFrame "
+                    "must equal the available data labels per cell."
+                )
+            )
 
     def _impute_non_case(self, cases: pd.DataFrame) -> pd.DataFrame:
         """Imputes case numbers for non_case column.
@@ -66,74 +85,74 @@ class _DataLoader:
         )
         return pd.concat([cases, non_cases], ignore_index=True)
 
-    def _prepare_signals(self, signals: pd.DataFrame, cases: pd.DataFrame) -> pd.DataFrame:
-        signals_correct = self._check_signals_correctness(signals, cases)
-        return self._impute_signals(signals_correct, cases)
-
     def _check_signals_correctness(
         self,
-        signals_correct: pd.DataFrame,
+        signals: pd.DataFrame,
         cases: pd.DataFrame,
     ) -> pd.DataFrame:
-        if not (
-            pd.api.types.is_float_dtype(signals_correct["value"])
-            and ((1 >= signals_correct["value"]) & (signals_correct["value"] >= 0)).all()
-        ):
-            raise ValueError("'values' in signal DataFrame must be floats between 0 and 1.")
+        self._check_case_coords_subset_of_signal_coords(signals)
+        self._check_coords_points_are_case_subset(signals, cases)
+        self._check_signal_label_consitency(signals)
+        self._check_signals_floats_between_zero_one(signals)
+        self._check_must_have_signals(signals)
+        self._check_empty_cells(signals)
+        return signals
 
-        if (
-            set(signals_correct.loc[:, self.COORDS].apply(tuple, axis=1))
-            - set(cases.loc[:, self.COORDS].apply(tuple, axis=1))
-            != set()
-        ):
-            raise ValueError("Coordinates of 'signals' must be a subset of coordinates of 'cases'.")
-
-        if (
-            signals_correct.groupby(self.COORDS).size() != signals_correct["signal_label"].nunique()
-        ).any():
-            raise ValueError("Each coordinate must contain the same amount of signals.")
-        return signals_correct
-
-    def _impute_signals(
-        self, signals: pd.DataFrame, cases: pd.DataFrame, agg_function: Optional[str] = "min"
-    ) -> pd.DataFrame:
-        """Calculates signals for endemic and non cases when they are missing."""
-        assigns = self._column_imputation(signals)
-        aggs = dict.fromkeys(list(assigns), agg_function)
-        if len(assigns) > 0:
-            non_case_info = (
-                cases.query("data_label=='non_case'")
-                .rename(columns={"value": "non_case"})
-                .drop(columns="data_label")
-            )  # non_case information needed for column imputation
-            missing_signals = (
-                signals.merge(
-                    non_case_info,
-                    on=self.COORDS,
-                    how="right",
+    def _check_case_coords_subset_of_signal_coords(self, signals) -> None:
+        try:
+            signals[self.COORDS]
+        except KeyError:
+            raise KeyError(
+                (
+                    "Not all coordinate columns of the cases DataFrame are contained in the "
+                    f"signals DataFrame. It must contain {self.COORDS}"
                 )
-                .assign(**assigns)
-                .groupby(self.COORDS)
-                .agg(aggs)
-                .reset_index()
-                .melt(id_vars=self.COORDS, var_name="signal_label")
             )
-            return pd.concat([signals, missing_signals], ignore_index=True)
-        else:
-            return signals
 
-    def _column_imputation(
-        self, signals: pd.DataFrame
-    ) -> dict[str, Callable[[pd.DataFrame], pd.Series]]:
-        assigns = {}
-        if not signals["signal_label"].str.contains("w_endemic").any():
-            assigns["w_endemic"] = lambda x: (1 - x["value"]) * np.logical_xor(x["non_case"], 1)
-            warn("w_endemic is missing and is being imputed.")
+    def _check_coords_points_are_case_subset(self, signals, cases) -> None:
+        unique_case_coords = set(cases[self.COORDS].apply(tuple, axis=1))
+        unique_signale_coords = set(signals[self.COORDS].apply(tuple, axis=1))
+        if not (unique_case_coords - unique_signale_coords == set()):
+            raise ValueError("Coordinates of cases must be subset of signals' coordinates")
 
-        if not signals["signal_label"].str.contains("w_non_case").any():
-            assigns["w_non_case"] = lambda x: (1 - x["value"]) * x["non_case"]
-            warn("w_non_case is missing and is being imputed.")
-        return assigns
+    def _check_signal_label_consitency(self, signals) -> None:
+        unique_signal_label_not_eq_signal_labels_per_coord = signals.groupby(self.COORDS)[
+            "signal_label"
+        ].apply(lambda x: list(x) != list(signals["signal_label"].unique()))
+        if unique_signal_label_not_eq_signal_labels_per_coord.any():
+            raise ValueError(
+                (
+                    "The set of all signal labels in the signals DataFrame "
+                    "must equal the available signals labels per cell."
+                )
+            )
+
+    def _check_signals_floats_between_zero_one(self, signals) -> None:
+        if not (
+            pd.api.types.is_float_dtype(signals["value"])
+            and ((1 >= signals["value"]) & (signals["value"] >= 0)).all()
+        ):
+            raise ValueError("'values' in signals DataFrame must be floats between 0 and 1.")
+
+    def _check_must_have_signals(self, signals) -> None:
+        if ("endemic" not in signals["signal_label"].values) or (
+            "non_case" not in signals["signal_label"].values
+        ):
+            raise ValueError(
+                "Signals DataFrame must contain 'endemic' and 'non_case' signal_label."
+            )
+
+    def _check_empty_cells(self, signals) -> None:
+        if (signals.groupby(self.COORDS).agg({"value": "sum"}).values == 0).any():
+            raise ValueError(
+                (
+                    "At least one signal per coordinate has to be non-zero "
+                    "in the signals DataFrame."
+                )
+            )
+
+
+# TODO: Check F1 score sample weight / normalization
 
 
 class _ScoreBase(_DataLoader):
@@ -150,52 +169,47 @@ class _ScoreBase(_DataLoader):
         )
 
     def _p_hat_di(self) -> pd.DataFrame:
-        """Calculates p^(d_i | x) = sum( p^(d_i| s_j, x) p^(s_j, x) )"""
-        p_hat_di = self._p_hat_di_given_sj_x().merge(
-            self._p_hat_sj_given_x(),
-            on=self.COORDS + ["s_j"],
+        """Calculates p^(d_i | x) = sum( p(d_i| s_j, x) p(s_j, x) )"""
+        p_hat_di = self._p_di_given_sj().merge(
+            self._p_sj_given_x(),
+            on="s_j",
         )
-        p_hat_di.loc[:, "p^(d_i)"] = p_hat_di["posterior"] * p_hat_di["prior"]
-        p_hat_di = p_hat_di.groupby(self.COORDS + ["d_i"]).agg({"p^(d_i)": sum}).reset_index()
+        p_hat_di.loc[:, "p(d_i,s_j|x)"] = p_hat_di["posterior"] * p_hat_di["prior"]
+        p_hat_di = (
+            p_hat_di.groupby(self.COORDS + ["d_i"])
+            .agg({"p(d_i,s_j|x)": sum})
+            .rename(columns={"p(d_i,s_j|x)": "p^(d_i)"})
+            .reset_index()
+        )
         return p_hat_di
 
     def _p_di_given_x(self) -> pd.DataFrame:
-        return (
-            self.cases.assign(
-                value=lambda x: x.value / x.groupby(self.COORDS)["value"].transform("sum").values
-            )
-            .fillna(0)
-            .rename(columns={"data_label": "d_i", "value": "p(d_i)"})
-        )
+        return self.cases.assign(
+            value=lambda x: x.value / x.groupby(self.COORDS)["value"].transform("sum").values
+        ).rename(columns={"data_label": "d_i", "value": "p(d_i)"})
 
-    def _p_hat_sj_given_x(self) -> pd.DataFrame:
-        """p^ (s_j|x) = w(s, x) / sum_s (w(s,x))"""
+    def _p_sj_given_x(self) -> pd.DataFrame:
+        """p (s_j|x) = w(s, x) / sum_s (w(s,x))"""
         return (
             self.signals.assign(
-                prior=lambda x: (x.value / x.groupby(self.COORDS)["value"].transform("sum")).fillna(
-                    0
-                ),
-                s_j=lambda x: x["signal_label"].str.replace("w_", ""),
+                prior=lambda x: (x.value / x.groupby(self.COORDS)["value"].transform("sum")),
+                s_j=lambda x: x["signal_label"],
             )
             .drop(columns=["signal_label", "value"])
             .loc[:, self.COORDS + ["prior", "s_j"]]
         )
 
-    def _p_hat_di_given_sj_x(self) -> pd.DataFrame:
-        """Calculates p^(d_i | s_j, x) which depends on the use case."""
-        unique_coords = [self.cases[coord].unique() for coord in self.COORDS]
+    def _p_di_given_sj(self) -> pd.DataFrame:
+        """Calculates p(d_i | s_j) which depends on the use case."""
         signal_per_diseases = list(
             product(
-                product(*unique_coords),
-                product(
-                    self.DATA_LABELS,
-                    [col.replace("w_", "") for col in self.SIGNALS_LABELS],
-                ),
-            )
+                self.DATA_LABELS,
+                self.SIGNALS_LABELS,
+            ),
         )
         df = pd.DataFrame(
-            [tuple_[0] + tuple_[1] for tuple_ in signal_per_diseases],
-            columns=list(self.COORDS) + ["d_i", "s_j"],
+            signal_per_diseases,
+            columns=["d_i", "s_j"],
         )
 
         signal_data_indeces = df.query(
@@ -205,8 +219,9 @@ class _ScoreBase(_DataLoader):
             set(self.DATA_LABELS) - set(self.MUST_HAVE_LABELS)
         )
 
-        non_case_endemic_signal_indeces = df.query("d_i == s_j").index
-        df.loc[non_case_endemic_signal_indeces, "posterior"] = 1
+        df.loc[(df.loc[:, "d_i"] == "endemic") & (df.loc[:, "s_j"] == "endemic"), "posterior"] = 1
+        df.loc[(df.loc[:, "d_i"] == "non_case") & (df.loc[:, "s_j"] == "non_case"), "posterior"] = 1
+        # Only NAs left are entries where d_i or s_j in ['endemic', 'non_case'] and d_i != s_j
         return df.fillna(0)
 
 
@@ -223,18 +238,28 @@ class Score(_ScoreBase):
         cases: pd.DataFrame,
         signals: pd.DataFrame,
     ) -> None:
-        """Builds scorer given data.
+        r"""Builds scorer given data.
 
         Args:
-            cases: Case numbers with coordinate columns, 'data_label' column, and 'value' column.
-                'data_label' should contain (outbreak) labels. Must contain 'endemic' and must
-                not contain data label 'non_case'. 'value' column contains case numbers
-                per cell and data_label. Remaining columns define the coordinate system.
-                Coordinates in `cases` is required to be complete.
-            signals: Signal with coordinate columns, 'signal_label' column, and 'value' column.
-                Coordinates in `signals` must be a subset of the coordinates in `cases`.
-                Each signal_label must start with 'w_' and 'w_endemic' and 'w_non_case'
-                should be included.
+            cases: This DataFrame must contain the following columns and no NaNs:
+
+                - ``data_label``. Is the class per outbreak. Must contain ``endemic``
+                and must not contain ``non-case``.
+                - ``value``. This is the amount of cases in the respective cell.
+                This value must be an positive integer.
+                - Each other column in the DataFrame is treated as a coordinate
+                where each row is one single cell. This coordinate system is
+                the evaluation resolution.
+
+            signals: This DataFrame must contain the following columns:
+
+                - ``signal_label``. Is the class per signal. Must contain ``endemic`` and
+                ``non-case``.
+                - ``value``. This is the signal strength :math:`w` and should be :math:`w \in [0,1]`
+                - Each other column in the DataFrame is treated as a coordinate
+                where each row is one single cell. Cases coordinates and cells
+                must be subset of cases coordinates and cells. Cells outside
+                the coordinate system of the cases DataFrame are ignored.
         """
         super().__init__(cases, signals)
 
@@ -255,7 +280,7 @@ class Score(_ScoreBase):
         elif weights == "cases":
             eval_df = self._apply_case_weighting(eval_df)
         elif weights == "timespace":
-            # Fix due to Optional in calc_score and no Optional in EpiMetrics
+            # Underscore is fix due to Optional in calc_score and no Optional in EpiMetrics
             # https://github.com/python/mypy/issues/7268
             _gauss_dims = gauss_dims
             _covariance_diag = covariance_diag
@@ -332,12 +357,14 @@ class Score(_ScoreBase):
             for label in thresholded_eval.columns.levels[1]:
                 duplicated = self._duplicate_cells_by_cases(thresholded_eval, label)
                 cm_list.append(
-                    confusion_matrix(duplicated["true"].values, duplicated["pred"].values)
+                    sk_metrics.confusion_matrix(
+                        duplicated["true"].values, duplicated["pred"].values
+                    )
                 )
             cm: np.ndarray = np.array(cm_list)
 
         else:
-            cm = multilabel_confusion_matrix(
+            cm = sk_metrics.multilabel_confusion_matrix(
                 thresholded_eval.loc[:, "true"].values,
                 thresholded_eval.loc[:, "pred"].values,
             )
@@ -366,22 +393,32 @@ class EpiMetrics(_DataLoader):
         cases: pd.DataFrame,
         signals: pd.DataFrame,
     ) -> None:
-        """Builds EpiMetrics given data.
+        r"""Builds EpiMetrics given data.
 
         Args:
-            cases: Case numbers with coordinate columns, 'data_label' column, and 'value' column.
-                'data_label' should contain (outbreak) labels. Must contain 'endemic' and must
-                not contain data label 'non_case'. 'value' column contains case numbers per cell
-                and data_label. Remaining columns define the coordinate system.
-                Coordinates in `cases` is required to be complete.
-            signals: Signal with coordinate columns, 'signal_label' column, and 'value' column.
-                Coordinates in `signals` must be a subset of the coordinates in `cases`.
-                Each signal_label must start with 'w_' and 'w_endemic' and 'w_non_case'
-                should be included.
+            cases: This DataFrame must contain the following columns and no NaNs:
+
+                - ``data_label``. Is the class per outbreak. Must contain ``endemic``
+                and must not contain ``non-case``.
+                - ``value``. This is the amount of cases in the respective cell.
+                This value must be an positive integer.
+                - Each other column in the DataFrame is treated as a coordinate
+                where each row is one single cell. This coordinate system is
+                the evaluation resolution.
+
+            signals: This DataFrame must contain the following columns:
+
+                - ``signal_label``. Is the class per signal. Must contain ``endemic`` and
+                ``non-case``.
+                - ``value``. This is the signal strength :math:`w` and should be :math:`w \in [0,1]`
+                - Each other column in the DataFrame is treated as a coordinate
+                where each row is one single cell. Cases coordinates and cells
+                must be subset of cases coordinates and cells. Cells outside
+                the coordinate system of the cases DataFrame are ignored.
         """
         super().__init__(cases, signals)
         self.outbreak_labels = list(set(self.DATA_LABELS) - set(["endemic", "non_case"]))
-        self.outbreak_signals = list(set(self.SIGNALS_LABELS) - set(["w_endemic", "w_non_case"]))
+        self.outbreak_signals = list(set(self.SIGNALS_LABELS) - set(["endemic", "non_case"]))
 
     def timeliness(self, time_axis: str, D: int, signal_threshold: float = 0) -> dict[str, float]:
         signals_agg = (
