@@ -248,7 +248,7 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
             "f1",
             0.5,
             0.2,
-            weights="cases",
+            weighting="cases",
         )
         == {"endemic": 0.8888888888888888, "non_case": 1.0, "one": 1.0, "three": 0.0, "two": 0.4}
     )
@@ -259,7 +259,7 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
             "sensitivity",
             0.5,
             0.2,
-            weights="cases",
+            weighting="cases",
         )
         == {"endemic": 0.8888888888888888, "non_case": 1.0, "one": 1.0, "three": 0.0, "two": 0.25}
     )
@@ -270,7 +270,7 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
             "recall",
             0.5,
             0.2,
-            weights="cases",
+            weighting="cases",
         )
         == {"endemic": 0.8888888888888888, "non_case": 1.0, "one": 1.0, "three": 0.0, "two": 0.25}
     )
@@ -281,7 +281,7 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
             "tpr",
             0.5,
             0.2,
-            weights="cases",
+            weighting="cases",
         )
         == {"endemic": 0.8888888888888888, "non_case": 1.0, "one": 1.0, "three": 0.0, "two": 0.25}
     )
@@ -292,7 +292,7 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
         "specificity",
         0.5,
         0.2,
-        weights="cases",
+        weighting="cases",
     )
     expected = {"endemic": 0.0, "non_case": np.nan, "one": np.nan, "three": np.nan, "two": np.nan}
     compare_dicts_with_nas(result, expected)
@@ -303,7 +303,7 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
         "tnr",
         0.5,
         0.2,
-        weights="cases",
+        weighting="cases",
     )
     expected = {"endemic": 0.0, "non_case": np.nan, "one": np.nan, "three": np.nan, "two": np.nan}
     compare_dicts_with_nas(result, expected)
@@ -315,7 +315,7 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
             "matthews",
             0.5,
             0.2,
-            weights="cases",
+            weighting="cases",
         )
         == {"endemic": -0.1111111111111111, "non_case": 0.0, "one": 0.0, "three": 0.0, "two": 0.0}
     )
@@ -324,7 +324,7 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
         "brier",
         0.5,
-        weights="cases",
+        weighting="cases",
     ) == {
         "endemic": 0.3,
         "non_case": 0.10416666666666667,
@@ -338,7 +338,7 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
         "auc",
         0.5,
-        weights="cases",
+        weighting="cases",
     )
     expected = {"endemic": 0.5, "non_case": np.nan, "one": np.nan, "three": np.nan, "two": np.nan}
     compare_dicts_with_nas(result, expected)
@@ -347,7 +347,7 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
         "r2",
-        weights="cases",
+        weighting="cases",
     ) == {
         "endemic": -5.944444444444444,
         "non_case": 0.0,
@@ -359,7 +359,7 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
         "mse",
-        weights="cases",
+        weighting="cases",
     ) == {
         "endemic": 0.2777777777777778,
         "non_case": 0.10416666666666667,
@@ -371,7 +371,7 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
         "mae",
-        weights="cases",
+        weighting="cases",
     ) == {
         "endemic": 0.4666666666666667,
         "non_case": 0.20833333333333334,
@@ -385,7 +385,7 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
         "fpr",
         0.5,
         0.2,
-        weights="cases",
+        weighting="cases",
     )
     expected = {"endemic": 1.0, "non_case": np.nan, "one": np.nan, "three": np.nan, "two": np.nan}
     compare_dicts_with_nas(result, expected)
@@ -396,7 +396,7 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
             "fnr",
             0.5,
             0.2,
-            weights="cases",
+            weighting="cases",
         )
         == {"endemic": 0.1111111111111111, "non_case": 0.0, "one": 0.0, "three": 1.0, "two": 0.75}
     )
@@ -406,7 +406,7 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
         "precision",
         0.5,
         0.2,
-        weights="cases",
+        weighting="cases",
     )
     expected = {
         "endemic": 0.8888888888888888,
@@ -422,7 +422,7 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
         "ppv",
         0.5,
         0.2,
-        weights="cases",
+        weighting="cases",
     )
     expected = {
         "endemic": 0.8888888888888888,
@@ -438,7 +438,7 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
         "npv",
         0.5,
         0.2,
-        weights="cases",
+        weighting="cases",
     )
     expected = {"endemic": 0.0, "non_case": np.nan, "one": np.nan, "three": 0.0, "two": 0.0}
     compare_dicts_with_nas(result, expected)
@@ -451,7 +451,7 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         "f1",
         0.5,
         0.2,
-        weights="timespace",
+        weighting="timespace",
         gauss_dims=["x1"],
         time_axis="x2",
     ) == {
@@ -468,7 +468,7 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
             "sensitivity",
             0.5,
             0.2,
-            weights="timespace",
+            weighting="timespace",
             gauss_dims=["x1"],
             time_axis="x2",
         )
@@ -481,7 +481,7 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
             "recall",
             0.5,
             0.2,
-            weights="timespace",
+            weighting="timespace",
             gauss_dims=["x1"],
             time_axis="x2",
         )
@@ -494,7 +494,7 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
             "tpr",
             0.5,
             0.2,
-            weights="timespace",
+            weighting="timespace",
             gauss_dims=["x1"],
             time_axis="x2",
         )
@@ -538,7 +538,7 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         "matthews",
         0.5,
         0.2,
-        weights="timespace",
+        weighting="timespace",
         gauss_dims=["x1"],
         time_axis="x2",
     ) == {
@@ -553,7 +553,7 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
         "brier",
         0.5,
-        weights="timespace",
+        weighting="timespace",
         gauss_dims=["x1"],
         time_axis="x2",
     ) == {
@@ -569,7 +569,7 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
         "auc",
         0.5,
-        weights="timespace",
+        weighting="timespace",
         gauss_dims=["x1"],
         time_axis="x2",
     )
@@ -586,7 +586,7 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
         "r2",
-        weights="timespace",
+        weighting="timespace",
         gauss_dims=["x1"],
         time_axis="x2",
     ) == {
@@ -600,7 +600,7 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
         "mse",
-        weights="timespace",
+        weighting="timespace",
         gauss_dims=["x1"],
         time_axis="x2",
     ) == {
@@ -614,7 +614,7 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
         "mae",
-        weights="timespace",
+        weighting="timespace",
         gauss_dims=["x1"],
         time_axis="x2",
     ) == {
@@ -690,12 +690,12 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
 
 
 def test_scorer_api_errors(shared_datadir) -> None:
-    with pytest.raises(ValueError, match="weights must be None, 'cases', or 'timespace'."):
+    with pytest.raises(ValueError, match="weighting must be None, 'cases', or 'timespace'."):
         assert score(
             pd.read_csv("tests/data/paper_example/cases_long.csv"),
             pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
             "mse",
-            weights="not a weighting strategy",
+            weighting="not a weighting strategy",
         )
 
 

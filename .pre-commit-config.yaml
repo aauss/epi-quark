@@ -14,6 +14,8 @@ repos:
     rev: "v0.910"
     hooks:
       - id: mypy
+        verbose: true
+        args: [--ignore-missing-imports]
         exclude: ^docs/.*
   - repo: https://gitlab.com/pycqa/flake8
     rev: 4.0.1

@@ -127,12 +127,12 @@ score(cases, signals, "r2")
 # Some metrics require binary values such as F1. In this case, set thresholds.
 thresholded_metric = score(cases, signals, threshold_true=0.5, threshold_pred=0.5, metric="f1")
 
-# If you want to weight cells with more cases higher than others, use the `weights` parameter.
-case_weighted = score(cases, signals, "r2", weights="cases")
+# If you want to weight cells with more cases higher than others, use the `weighting` parameter.
+case_weighted = score(cases, signals, "r2", weighting="cases")
 
 # You can also weight by spatio-temporal accuracy of the detected outbreak. Just assign which column is the time and
 # which is the other weighting dimension.
 timespace_weighted = timespace_weighted = score(
-    cases, signals, "r2", weights="timespace", gauss_dims="x2", time_axis="x1"
+    cases, signals, "r2", weighting="timespace", gauss_dims="x2", time_axis="x1"
 )
 ```

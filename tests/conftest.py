@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from epiquark import EpiMetrics, Score
+from epiquark import EpiMetrics, ScoreCalculator
 
 
 @pytest.fixture
@@ -13,10 +13,10 @@ def paper_example_dfs(shared_datadir) -> tuple[pd.DataFrame, pd.DataFrame]:
 
 
 @pytest.fixture
-def paper_example_score(shared_datadir) -> Score:
+def paper_example_score(shared_datadir) -> ScoreCalculator:
     cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
     signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
-    return Score(cases, signals)
+    return ScoreCalculator(cases, signals)
 
 
 @pytest.fixture

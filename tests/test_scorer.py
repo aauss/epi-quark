@@ -4,10 +4,10 @@ import pandas as pd
 import pytest
 from sklearn import metrics
 
-from epiquark import Score
+from epiquark import ScoreCalculator
 
 
-def test_non_case_imputation(shared_datadir, paper_example_score: Score) -> None:
+def test_non_case_imputation(shared_datadir, paper_example_score: ScoreCalculator) -> None:
     cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
     imputed = paper_example_score._impute_non_case(cases)
 
@@ -15,19 +15,19 @@ def test_non_case_imputation(shared_datadir, paper_example_score: Score) -> None
     pd.testing.assert_frame_equal(imputed, imputed_expected, check_dtype=False)
 
 
-def test_p_di_given_x(shared_datadir, paper_example_score: Score) -> None:
+def test_p_di_given_x(shared_datadir, paper_example_score: ScoreCalculator) -> None:
     p_di_given_x = paper_example_score._p_di_given_x()
     p_di_given_x_expected = pd.read_csv(shared_datadir / "paper_example/p_di_given_x.csv")
     pd.testing.assert_frame_equal(p_di_given_x, p_di_given_x_expected, check_dtype=False)
 
 
-def test_p_sj_given_x(shared_datadir, paper_example_score: Score) -> None:
+def test_p_sj_given_x(shared_datadir, paper_example_score: ScoreCalculator) -> None:
     p_sj_given_x = paper_example_score._p_sj_given_x()
     p_sj_given_x_expected = pd.read_csv(shared_datadir / "paper_example/p_sj_given_x_long.csv")
     pd.testing.assert_frame_equal(p_sj_given_x, p_sj_given_x_expected, check_dtype=False)
 
 
-def test_p_di_given_sj(shared_datadir, paper_example_score: Score) -> None:
+def test_p_di_given_sj(shared_datadir, paper_example_score: ScoreCalculator) -> None:
     p_di_given_sj_x = paper_example_score._p_di_given_sj()
     p_di_given_sj_x_expected = pd.read_csv(shared_datadir / "paper_example/p_di_given_sj.csv")
     str_cols = list(p_di_given_sj_x.select_dtypes(exclude="number").columns)
@@ -38,7 +38,7 @@ def test_p_di_given_sj(shared_datadir, paper_example_score: Score) -> None:
     )
 
 
-def test_p_hat_di(shared_datadir, paper_example_score: Score) -> None:
+def test_p_hat_di(shared_datadir, paper_example_score: ScoreCalculator) -> None:
     p_hat_di = (
         paper_example_score._p_hat_di().sort_values(by=["x1", "x2", "d_i"]).reset_index(drop=True)
     )
@@ -54,13 +54,13 @@ def test_p_hat_di(shared_datadir, paper_example_score: Score) -> None:
     )
 
 
-def test_eval_df(shared_datadir, paper_example_score: Score) -> None:
+def test_eval_df(shared_datadir, paper_example_score: ScoreCalculator) -> None:
     eval_df = paper_example_score._eval_df()
     eval_df_expected = pd.read_csv(shared_datadir / "paper_example/eval_df.csv")
     pd.testing.assert_frame_equal(eval_df, eval_df_expected, check_dtype=False)
 
 
-def test_score(paper_example_score: Score) -> None:
+def test_score(paper_example_score: ScoreCalculator) -> None:
     scores = paper_example_score.calc_score(metrics.f1_score, 1 / 2, 1 / 5)
     assert scores == {
         "endemic": 0.6153846153846154,
@@ -76,7 +76,7 @@ def test_check_no_nans_exist(paper_example_dfs) -> None:
 
     cases.loc[2, "value"] = pd.NA
     with pytest.raises(ValueError, match="Cases DataFrame must not contain any NaN values."):
-        Score(cases, signals)
+        ScoreCalculator(cases, signals)
 
 
 def test_check_cases_pos_ints(paper_example_dfs) -> None:
@@ -85,12 +85,12 @@ def test_check_cases_pos_ints(paper_example_dfs) -> None:
     cases_negative = cases.copy()
     cases_negative.at[2, "value"] = -1
     with pytest.raises(ValueError, match="Case counts must be non-negative, whole numbers."):
-        Score(cases_negative, signals)
+        ScoreCalculator(cases_negative, signals)
 
     cases_float = cases.copy()
     cases_float.loc[:, "value"] = cases_float.loc[:, "value"].astype(float)
     with pytest.raises(ValueError, match="Case counts must be non-negative, whole numbers."):
-        Score(cases_float, signals)
+        ScoreCalculator(cases_float, signals)
 
 
 def test_check_non_cases_not_include(paper_example_dfs) -> None:
@@ -104,7 +104,7 @@ def test_check_non_cases_not_include(paper_example_dfs) -> None:
             "This label is included automatically and therefore internally reserved."
         ),
     ):
-        Score(cases, signals)
+        ScoreCalculator(cases, signals)
 
 
 def test_check_non_cases_not_included(paper_example_dfs) -> None:
@@ -115,7 +115,7 @@ def test_check_non_cases_not_included(paper_example_dfs) -> None:
         ValueError,
         match=("Please add the label 'endemic' to your cases DataFrame."),
     ):
-        Score(cases, signals)
+        ScoreCalculator(cases, signals)
 
 
 def test_check_data_label_consitency(paper_example_dfs) -> None:
@@ -130,7 +130,7 @@ def test_check_data_label_consitency(paper_example_dfs) -> None:
             "must equal the available data labels per cell"
         ),
     ):
-        Score(cases_missing_label, signals)
+        ScoreCalculator(cases_missing_label, signals)
 
     cases_additional_label = cases.copy()
     cases_additional_label = cases_additional_label.append(
@@ -143,7 +143,7 @@ def test_check_data_label_consitency(paper_example_dfs) -> None:
             "must equal the available data labels per cell"
         ),
     ):
-        Score(cases_additional_label, signals)
+        ScoreCalculator(cases_additional_label, signals)
 
 
 def test_signal_empty_coord_error(paper_example_dfs) -> None:
@@ -154,7 +154,7 @@ def test_signal_empty_coord_error(paper_example_dfs) -> None:
         ValueError,
         match=("At least one signal per coordinate has to be non-zero in the signals DataFrame."),
     ):
-        Score(cases, signals)
+        ScoreCalculator(cases, signals)
 
 
 def test_check_coords_points_are_case_subset(paper_example_dfs) -> None:
@@ -165,7 +165,7 @@ def test_check_coords_points_are_case_subset(paper_example_dfs) -> None:
         ValueError,
         match=("Coordinates of cases must be subset of signals' coordinates"),
     ):
-        Score(cases, missing_coords)
+        ScoreCalculator(cases, missing_coords)
 
 
 def test_signal_missing_labels(paper_example_dfs) -> None:
@@ -176,14 +176,14 @@ def test_signal_missing_labels(paper_example_dfs) -> None:
         ValueError,
         match="Signals DataFrame must contain 'endemic' and 'non_case' signal_label.",
     ):
-        Score(cases, no_endemic_label)
+        ScoreCalculator(cases, no_endemic_label)
 
     no_non_case_label = signals.loc[signals.loc[:, "signal_label"] != "non_case"]
     with pytest.raises(
         ValueError,
         match="Signals DataFrame must contain 'endemic' and 'non_case' signal_label.",
     ):
-        Score(cases, no_non_case_label)
+        ScoreCalculator(cases, no_non_case_label)
 
 
 def test_signals_float_error(paper_example_dfs) -> None:
@@ -194,21 +194,21 @@ def test_signals_float_error(paper_example_dfs) -> None:
     with pytest.raises(
         ValueError, match="'values' in signals DataFrame must be floats between 0 and 1."
     ):
-        Score(cases, signals_negative_value)
+        ScoreCalculator(cases, signals_negative_value)
 
     signals_high_values = signals.copy()
     signals_high_values.at[0, "value"] = 2.0
     with pytest.raises(
         ValueError, match="'values' in signals DataFrame must be floats between 0 and 1."
     ):
-        Score(cases, signals_high_values)
+        ScoreCalculator(cases, signals_high_values)
 
     signals_not_float = signals.copy()
     signals_not_float.loc[:, "value"] = 1
     with pytest.raises(
         ValueError, match="'values' in signals DataFrame must be floats between 0 and 1."
     ):
-        Score(cases, signals_not_float)
+        ScoreCalculator(cases, signals_not_float)
 
 
 def test_check_signal_label_consitency(paper_example_dfs) -> None:
@@ -222,7 +222,7 @@ def test_check_signal_label_consitency(paper_example_dfs) -> None:
             "must equal the available signals labels per cell."
         ),
     ):
-        Score(cases, signals)
+        ScoreCalculator(cases, signals)
 
     signals = signals.append(
         pd.DataFrame(
@@ -236,7 +236,7 @@ def test_check_signal_label_consitency(paper_example_dfs) -> None:
             "must equal the available signals labels per cell."
         ),
     ):
-        Score(cases, signals)
+        ScoreCalculator(cases, signals)
 
 
 def test_check_case_coords_subset_of_signal_coords(paper_example_dfs) -> None:
@@ -250,11 +250,11 @@ def test_check_case_coords_subset_of_signal_coords(paper_example_dfs) -> None:
             "signals DataFrame."
         ),
     ):
-        Score(cases, signals)
+        ScoreCalculator(cases, signals)
 
 
-def test_class_based_conf_mat(paper_example_score: Score) -> None:
-    confusion_matrix = paper_example_score.class_based_conf_mat()
+def test_class_based_conf_mat(paper_example_score: ScoreCalculator) -> None:
+    confusion_matrix = paper_example_score.class_based_conf_mat(p_thresh=0.5, p_hat_thresh=0.2)
     confusion_matrix_expected = {
         "endemic": [[16, 4], [1, 4]],
         "non_case": [[13, 0], [0, 12]],
@@ -266,7 +266,9 @@ def test_class_based_conf_mat(paper_example_score: Score) -> None:
         confusion_matrix_expected, sort_keys=True
     )
 
-    confusion_matrix_weighted = paper_example_score.class_based_conf_mat(weighted=True)
+    confusion_matrix_weighted = paper_example_score.class_based_conf_mat(
+        weighted=True, p_thresh=0.5, p_hat_thresh=0.2
+    )
     confusion_matrix_weighted_expected = {
         "endemic": [[20, 4], [1, 4]],
         "non_case": [[13, 0], [0, 12]],

@@ -4,7 +4,7 @@ from typing import Optional
 import pandas as pd
 import sklearn.metrics as sk_metrics
 
-from .scorer import EpiMetrics, Score
+from .scorer import EpiMetrics, ScoreCalculator
 
 
 @dataclass
@@ -39,8 +39,8 @@ def score(
     metric: str,
     threshold_true: Optional[float] = None,
     threshold_pred: Optional[float] = None,
-    weights: Optional[str] = None,
-    gauss_dims: Optional[list] = None,
+    weighting: Optional[str] = None,
+    gauss_dims: Optional[list[str]] = None,
     covariance_diag: Optional[list[float]] = None,
     time_axis: Optional[str] = None,
 ):
@@ -98,7 +98,7 @@ def score(
         threshold_true: To binarize :math:`p(d_i|x)`, the true probability per disease given cell.
         threshold_pred: To binarize :math:`\hat{p}(d_i|x)`, the predicted
                         probability per disease given cell.
-        weights: Assigns weight to :math:`p(d_i|x)` and :math:`\hat{p}(d_i|x)` by either
+        weighting: Assigns weight to :math:`p(d_i|x)` and :math:`\hat{p}(d_i|x)` by either
                  'cases' or 'timespace'. If None, no weighting is applied.
         gauss_dims: Only valid if weight is 'timespace'. Assigns over which coordinate cells
                     spatial weighting should happen.
@@ -130,14 +130,14 @@ def score(
         "mse": sk_metrics.mean_squared_error,
         "mae": sk_metrics.mean_absolute_error,
     }
-    return Score(cases, signals).calc_score(
-        metrics[metric],
-        threshold_true,
-        threshold_pred,
-        weights,
-        gauss_dims,
-        covariance_diag,
-        time_axis,
+    return ScoreCalculator(cases, signals).calc_score(
+        scorer=metrics[metric],
+        p_thresh=threshold_true,
+        p_hat_thresh=threshold_pred,
+        weighting=weighting,
+        gauss_dims=gauss_dims,
+        covariance_diag=covariance_diag,
+        time_axis=time_axis,
     )
 
 
@@ -251,7 +251,7 @@ def conf_matrix(
     Returns:
         Confusion matrix per data label.
     """
-    return Score(cases, signals).class_based_conf_mat(threshold_true, threshold_pred)
+    return ScoreCalculator(cases, signals).class_based_conf_mat(threshold_true, threshold_pred)
 
 
 def timeliness(
