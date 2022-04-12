@@ -281,7 +281,7 @@ class ScoreCalculator(_ScoreBase):
         elif weighting == "cases":
             eval_df = self._apply_case_weighting(eval_df)
         elif weighting == "timespace":
-            # Underscore is fix due to Optional in calc_score and no Optional in EpiMetrics
+            # Underscore is fix due to Optional in calc_score and no Optional in TimeSpaciness
             # https://github.com/python/mypy/issues/7268
             _gauss_dims = gauss_dims
             _covariance_diag = covariance_diag
@@ -306,12 +306,14 @@ class ScoreCalculator(_ScoreBase):
     def _apply_timespace_weighting(
         self, eval_df, gauss_dims, covariance_diag, time_axis
     ) -> pd.DataFrame:
-        epimetrics = EpiMetrics(self.cases.query("data_label!='non_case'"), self.signals)
-        timespace_weights = epimetrics.timespace_weighting(gauss_dims, covariance_diag, time_axis)
+        timespaciness = TimeSpaciness(self.cases.query("data_label!='non_case'"), self.signals)
+        timespace_weights = timespaciness.timespace_weighting(
+            gauss_dims, covariance_diag, time_axis
+        )
         return eval_df.merge(
             timespace_weights,
-            left_on=epimetrics.COORDS + ["d_i"],
-            right_on=epimetrics.COORDS + ["data_label"],
+            left_on=timespaciness.COORDS + ["d_i"],
+            right_on=timespaciness.COORDS + ["data_label"],
             how="left",
         )
 
@@ -333,16 +335,15 @@ class ScoreCalculator(_ScoreBase):
         return eval_df
 
 
-# TODO: Split timeliness and time-space weighting
-class EpiMetrics(_DataLoader):
-    """A class to calculate epidemiologically relevant metrics."""
+class TimeSpaciness(_DataLoader):
+    """A class to calculate time space accuracy."""
 
     def __init__(
         self,
         cases: pd.DataFrame,
         signals: pd.DataFrame,
     ) -> None:
-        r"""Builds EpiMetrics given data.
+        r"""Builds TimeSpaciness given data.
 
         Args:
             cases: This DataFrame must contain the following columns and no NaNs:
@@ -366,57 +367,6 @@ class EpiMetrics(_DataLoader):
                 the coordinate system of the cases DataFrame are ignored.
         """
         super().__init__(cases, signals)
-        self.outbreak_labels = list(set(self.DATA_LABELS) - set(["endemic", "non_case"]))
-        self.outbreak_signals = list(set(self.SIGNALS_LABELS) - set(["endemic", "non_case"]))
-
-    def timeliness(self, time_axis: str, D: int, signal_threshold: float = 0) -> dict[str, float]:
-        if not isinstance(time_axis, str):
-            raise ValueError("time_axis must be of type str.")
-
-        if not (isinstance(D, int) and (D > 0)):
-            raise ValueError("D must be a positive integer.")
-
-        signals_agg = (
-            self.signals.query("signal_label.isin(@self.outbreak_signals)")
-            .assign(value=lambda x: np.where(x["value"] > signal_threshold, 1, 0))
-            .groupby(time_axis)
-            .agg({"value": "any"})
-        )
-        cases_agg = (
-            self.cases.query("data_label.isin(@self.outbreak_labels)")
-            .groupby([time_axis, "data_label"])
-            .agg({"value": "any"})
-            .reset_index()
-        )
-
-        delays_per_label = (
-            cases_agg.merge(
-                signals_agg,
-                suffixes=("_cases", "_signals"),
-                on=time_axis,
-            )
-            .groupby("data_label")
-            .apply(self._calc_delay)
-        )
-        # TODO: sollte ohne clip auskommen
-        return dict(
-            (1 - delays_per_label / D).clip(0, 1)
-        )  # TODO: check in paper if clipping is really necessary
-
-    @staticmethod
-    def _calc_delay(df: pd.DataFrame) -> int:
-        max_delay = len(df)
-        # should ideally work with gauss weighting
-        first_case_idx = (df["value_cases"] == 1).argmax()
-        first_signal_idx = (df["value_signals"] == 1).argmax()
-        # erst delay berechnen, über den delay die bedingung (ist zwischen 0 und D) prüfen
-        #  und dann timeliness zurückgeben
-        if (df["value_cases"].sum() == 0) or (df["value_signals"].sum() == 0):
-            return max_delay
-        elif first_signal_idx < first_case_idx:
-            return max_delay
-        else:
-            return first_signal_idx - first_case_idx
 
     def timespace_weighting(
         self,
@@ -493,3 +443,88 @@ class EpiMetrics(_DataLoader):
                 (np.zeros(first_true_idx), np.ones(mask_len - first_true_idx))
             )
         return df.merge(mask, on=time_axis, how="left").drop(columns=["value", "data_label"])
+
+
+class Timeliness(_DataLoader):
+    """A class to calculate timeliness of detected outbreak."""
+
+    def __init__(
+        self,
+        cases: pd.DataFrame,
+        signals: pd.DataFrame,
+    ) -> None:
+        r"""Builds Timeliness given data.
+
+        Args:
+            cases: This DataFrame must contain the following columns and no NaNs:
+
+                - ``data_label``. Is the class per outbreak. Must contain ``endemic``
+                and must not contain ``non-case``.
+                - ``value``. This is the amount of cases in the respective cell.
+                This value must be an positive integer.
+                - Each other column in the DataFrame is treated as a coordinate
+                where each row is one single cell. This coordinate system is
+                the evaluation resolution.
+
+            signals: This DataFrame must contain the following columns:
+
+                - ``signal_label``. Is the class per signal. Must contain ``endemic`` and
+                ``non-case``.
+                - ``value``. This is the signal strength :math:`w` and should be :math:`w \in [0,1]`
+                - Each other column in the DataFrame is treated as a coordinate
+                where each row is one single cell. Cases coordinates and cells
+                must be subset of cases coordinates and cells. Cells outside
+                the coordinate system of the cases DataFrame are ignored.
+        """
+        super().__init__(cases, signals)
+        self.outbreak_labels = list(set(self.DATA_LABELS) - set(["endemic", "non_case"]))
+        self.outbreak_signals = list(set(self.SIGNALS_LABELS) - set(["endemic", "non_case"]))
+
+    def timeliness(self, time_axis: str, D: int, signal_threshold: float = 0) -> dict[str, float]:
+        if not isinstance(time_axis, str):
+            raise ValueError("time_axis must be of type str.")
+
+        if not (isinstance(D, int) and (D > 0)):
+            raise ValueError("D must be a positive integer.")
+
+        signals_agg = (
+            self.signals.query("signal_label.isin(@self.outbreak_signals)")
+            .assign(value=lambda x: np.where(x["value"] > signal_threshold, 1, 0))
+            .groupby(time_axis)
+            .agg({"value": "any"})
+        )
+        cases_agg = (
+            self.cases.query("data_label.isin(@self.outbreak_labels)")
+            .groupby([time_axis, "data_label"])
+            .agg({"value": "any"})
+            .reset_index()
+        )
+
+        delays_per_label = (
+            cases_agg.merge(
+                signals_agg,
+                suffixes=("_cases", "_signals"),
+                on=time_axis,
+            )
+            .groupby("data_label")
+            .apply(self._calc_delay)
+        )
+        # TODO: sollte ohne clip auskommen
+        return dict(
+            (1 - delays_per_label / D).clip(0, 1)
+        )  # TODO: check in paper if clipping is really necessary
+
+    @staticmethod
+    def _calc_delay(df: pd.DataFrame) -> int:
+        max_delay = len(df)
+        # should ideally work with gauss weighting
+        first_case_idx = (df["value_cases"] == 1).argmax()
+        first_signal_idx = (df["value_signals"] == 1).argmax()
+        # erst delay berechnen, über den delay die bedingung (ist zwischen 0 und D) prüfen
+        #  und dann timeliness zurückgeben
+        if (df["value_cases"].sum() == 0) or (df["value_signals"].sum() == 0):
+            return max_delay
+        elif first_signal_idx < first_case_idx:
+            return max_delay
+        else:
+            return first_signal_idx - first_case_idx

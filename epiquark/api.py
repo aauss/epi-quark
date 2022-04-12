@@ -5,7 +5,7 @@ import numpy as np
 import pandas as pd
 import sklearn.metrics as sk_metrics
 
-from .scorer import EpiMetrics, ScoreCalculator
+from .scorer import ScoreCalculator, Timeliness
 
 
 @dataclass
@@ -331,4 +331,4 @@ def timeliness(
     Returns:
         Timeliness score per data label.
     """
-    return EpiMetrics(cases, signals).timeliness(time_axis, D, signal_threshold)
+    return Timeliness(cases, signals).timeliness(time_axis, D, signal_threshold)

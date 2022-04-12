@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from epiquark import EpiMetrics, ScoreCalculator
+from epiquark import ScoreCalculator, Timeliness, TimeSpaciness
 
 
 @pytest.fixture
@@ -20,10 +20,17 @@ def paper_example_score(shared_datadir) -> ScoreCalculator:
 
 
 @pytest.fixture
-def paper_example_epimetric(shared_datadir) -> EpiMetrics:
+def paper_example_timespaciness(shared_datadir) -> TimeSpaciness:
     cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
     signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
-    return EpiMetrics(cases, signals)
+    return TimeSpaciness(cases, signals)
+
+
+@pytest.fixture
+def paper_example_timeliness(shared_datadir) -> Timeliness:
+    cases = pd.read_csv(shared_datadir / "paper_example/cases_long.csv")
+    signals = pd.read_csv(shared_datadir / "paper_example/imputed_signals_long.csv")
+    return Timeliness(cases, signals)
 
 
 def compare_dicts_with_nas(result, expected) -> None:
