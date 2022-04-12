@@ -1,5 +1,3 @@
-import json
-
 import numpy as np
 import pandas as pd
 import pytest
@@ -700,25 +698,22 @@ def test_scorer_api_errors(shared_datadir) -> None:
 
 
 def test_conf_matrix_api(shared_datadir) -> None:
-    confusion_matrix = json.dumps(
-        conf_matrix(
-            pd.read_csv("tests/data/paper_example/cases_long.csv"),
-            pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
-            0.5,
-            0.2,
-        )
+    confusion_matrix = conf_matrix(
+        pd.read_csv("tests/data/paper_example/cases_long.csv"),
+        pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
+        0.5,
+        0.2,
     )
 
-    expected = json.dumps(
-        {
-            "endemic": [[16, 4], [1, 4]],
-            "non_case": [[13, 0], [0, 12]],
-            "one": [[20, 2], [0, 3]],
-            "three": [[18, 5], [2, 0]],
-            "two": [[17, 4], [3, 1]],
-        }
-    )
-    assert confusion_matrix == expected
+    expected = {
+        "endemic": np.array([[16, 4], [1, 4]]),
+        "non_case": np.array([[13, 0], [0, 12]]),
+        "one": np.array([[20, 2], [0, 3]]),
+        "three": np.array([[18, 5], [2, 0]]),
+        "two": np.array([[17, 4], [3, 1]]),
+    }
+
+    np.testing.assert_equal(confusion_matrix, expected)
 
 
 def test_timeliness_api():

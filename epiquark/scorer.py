@@ -1,5 +1,5 @@
 from itertools import product
-from typing import Optional
+from typing import Optional, Union
 
 import numpy as np
 import pandas as pd
@@ -268,12 +268,13 @@ class ScoreCalculator(_ScoreBase):
         scorer: sk_metrics,
         p_thresh: Optional[float] = None,
         p_hat_thresh: Optional[float] = None,
-        gauss_dims: Optional[list[str]] = None,
         weighting: Optional[str] = None,
+        gauss_dims: Optional[list[str]] = None,
         covariance_diag: Optional[list[float]] = None,
         time_axis: Optional[str] = None,
-    ) -> tuple[float, float]:
-
+    ) -> dict[str, Union[float, np.ndarray]]:
+        # TODO: replace covariance_diag and gauss_dims
+        #  with dict: timespace_weights = {"x1": 3, "x2": 4}
         eval_df = self._thresholded_eval_df(p_thresh, p_hat_thresh)
         if weighting is None:
             eval_df["weight"] = 1
@@ -318,6 +319,8 @@ class ScoreCalculator(_ScoreBase):
         self, p_thresh: Optional[float], p_hat_thresh: Optional[float]
     ) -> pd.DataFrame:
         eval_df = self._eval_df()
+        # TODO: change to strict larger than.
+        # If p_thresh is one p(d_i) is one, label positive anyway
         if p_thresh:
             eval_df = eval_df.assign(true=np.where(eval_df["p(d_i)"] >= p_thresh, 1, 0))
         else:
@@ -329,63 +332,8 @@ class ScoreCalculator(_ScoreBase):
             eval_df = eval_df.rename(columns={"p^(d_i)": "pred"})
         return eval_df
 
-    def class_based_conf_mat(
-        self,
-        p_thresh: Optional[float] = None,
-        p_hat_thresh: Optional[float] = None,
-        weighted: Optional[bool] = False,
-    ) -> dict[str, list[list[int]]]:
-        """Return confusion matrix for all data labels.
 
-        The rows indicate the true labels and the columns the predicted labels.
-        The 0th row and column corresponds to the negative label, the 1st row
-        and column to the positive label.
-
-        You can find more on:
-        https://scikit-learn.org/stable/modules/generated/sklearn.metrics.confusion_matrix.html
-        """
-        if p_thresh is None:
-            p_thresh = 0
-        p_hat_thresh = p_hat_thresh or 0.5
-
-        thresholded_eval = self._thresholded_eval_df(p_thresh, p_hat_thresh)
-        thresholded_eval = thresholded_eval.pivot(
-            index=self.COORDS, columns="d_i", values=["true", "pred"]
-        )
-        if weighted:
-            cm_list: list[np.ndarray] = []
-            for label in thresholded_eval.columns.levels[1]:
-                duplicated = self._duplicate_cells_by_cases(thresholded_eval, label)
-                cm_list.append(
-                    sk_metrics.confusion_matrix(
-                        duplicated["true"].values, duplicated["pred"].values
-                    )
-                )
-            cm: np.ndarray = np.array(cm_list)
-
-        else:
-            cm = sk_metrics.multilabel_confusion_matrix(
-                thresholded_eval.loc[:, "true"].values,
-                thresholded_eval.loc[:, "pred"].values,
-            )
-        return dict(zip(thresholded_eval.columns.levels[1], cm.tolist()))
-
-    def _duplicate_cells_by_cases(self, thresholded_eval: pd.DataFrame, label: str):
-        sliced_eval = thresholded_eval.loc[:, (slice(None), label)]
-        cases_per_cell_exceeding_one = (
-            self.cases.query("data_label==@label")["value"]
-            .where(lambda x: x > 1)
-            .dropna()
-            .reset_index(drop=True)
-        )
-        for idx, cases in cases_per_cell_exceeding_one.iteritems():
-            factor = cases - 1
-            for _ in range(int(factor)):
-                # duplicate cells that have more than one case
-                sliced_eval = sliced_eval.append(sliced_eval.iloc[idx])
-        return sliced_eval
-
-
+# TODO: Split timeliness and time-space weighting
 class EpiMetrics(_DataLoader):
     """A class to calculate epidemiologically relevant metrics."""
 
@@ -422,6 +370,8 @@ class EpiMetrics(_DataLoader):
         self.outbreak_signals = list(set(self.SIGNALS_LABELS) - set(["endemic", "non_case"]))
 
     def timeliness(self, time_axis: str, D: int, signal_threshold: float = 0) -> dict[str, float]:
+        # TODO: fehler werfen, wenn time_axis nicht str ist
+        # TODO: Check if D is a positive integer
         signals_agg = (
             self.signals.query("signal_label.isin(@self.outbreak_signals)")
             .assign(value=lambda x: np.where(x["value"] > signal_threshold, 1, 0))
@@ -444,7 +394,10 @@ class EpiMetrics(_DataLoader):
             .groupby("data_label")
             .apply(self._calc_delay)
         )
-        return dict((1 - delays_per_label / D).clip(0, 1))
+        # TODO: sollte ohne clip auskommen
+        return dict(
+            (1 - delays_per_label / D).clip(0, 1)
+        )  # TODO: check in paper if clipping is really necessary
 
     @staticmethod
     def _calc_delay(df: pd.DataFrame) -> int:
@@ -485,7 +438,7 @@ class EpiMetrics(_DataLoader):
         case_coords_dict = self._coords_where_more_than_one_case_per_label(
             gauss_dims, coords_system
         )
-
+        # check that if time is available, that it is used in the gaussian distr.
         weights = {}
         for data_label, case_coords in case_coords_dict.items():
             mvns = [multivariate_normal(case_coord, covariance_diag) for case_coord in case_coords]

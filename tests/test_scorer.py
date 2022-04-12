@@ -1,5 +1,4 @@
-import json
-
+import numpy as np
 import pandas as pd
 import pytest
 from sklearn import metrics
@@ -253,29 +252,27 @@ def test_check_case_coords_subset_of_signal_coords(paper_example_dfs) -> None:
         ScoreCalculator(cases, signals)
 
 
-def test_class_based_conf_mat(paper_example_score: ScoreCalculator) -> None:
-    confusion_matrix = paper_example_score.class_based_conf_mat(p_thresh=0.5, p_hat_thresh=0.2)
-    confusion_matrix_expected = {
-        "endemic": [[16, 4], [1, 4]],
-        "non_case": [[13, 0], [0, 12]],
-        "one": [[20, 2], [0, 3]],
-        "three": [[18, 5], [2, 0]],
-        "two": [[17, 4], [3, 1]],
-    }
-    assert json.dumps(confusion_matrix, sort_keys=True) == json.dumps(
-        confusion_matrix_expected, sort_keys=True
+def test_conf_mat(paper_example_score: ScoreCalculator) -> None:
+    confusion_matrix = paper_example_score.calc_score(
+        metrics.confusion_matrix, p_thresh=0.5, p_hat_thresh=0.2
     )
+    confusion_matrix_expected = {
+        "endemic": np.array([[16, 4], [1, 4]]),
+        "non_case": np.array([[13, 0], [0, 12]]),
+        "one": np.array([[20, 2], [0, 3]]),
+        "three": np.array([[18, 5], [2, 0]]),
+        "two": np.array([[17, 4], [3, 1]]),
+    }
+    np.testing.assert_equal(confusion_matrix, confusion_matrix_expected)
 
-    confusion_matrix_weighted = paper_example_score.class_based_conf_mat(
-        weighted=True, p_thresh=0.5, p_hat_thresh=0.2
+    confusion_matrix_weighted = paper_example_score.calc_score(
+        metrics.confusion_matrix, weighting="cases", p_thresh=0.5, p_hat_thresh=0.2
     )
     confusion_matrix_weighted_expected = {
-        "endemic": [[20, 4], [1, 4]],
-        "non_case": [[13, 0], [0, 12]],
-        "one": [[20, 2], [0, 3]],
-        "three": [[19, 5], [2, 0]],
-        "two": [[17, 4], [3, 1]],
+        "endemic": np.array([[0, 1], [1, 8]]),
+        "non_case": np.array([[0, 0], [0, 12]]),
+        "one": np.array([[0, 0], [0, 3]]),
+        "three": np.array([[0, 0], [3, 0]]),
+        "two": np.array([[0, 0], [3, 1]]),
     }
-    assert json.dumps(confusion_matrix_weighted, sort_keys=True) == json.dumps(
-        confusion_matrix_weighted_expected, sort_keys=True
-    )
+    np.testing.assert_equal(confusion_matrix_weighted, confusion_matrix_weighted_expected)

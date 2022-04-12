@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from typing import Optional
+from typing import Optional, Union
 
+import numpy as np
 import pandas as pd
 import sklearn.metrics as sk_metrics
 
@@ -33,13 +34,14 @@ class _ThreshRequired:
         return thresh_text
 
 
+# TODO: add time-space function for API. But how to aggregate over cells?
 def score(
     cases: pd.DataFrame,
     signals: pd.DataFrame,
     metric: str,
     threshold_true: Optional[float] = None,
     threshold_pred: Optional[float] = None,
-    weighting: Optional[str] = None,
+    weighting: Optional[Union[str, np.ndarray]] = None,
     gauss_dims: Optional[list[str]] = None,
     covariance_diag: Optional[list[float]] = None,
     time_axis: Optional[str] = None,
@@ -99,7 +101,9 @@ def score(
         threshold_pred: To binarize :math:`\hat{p}(d_i|x)`, the predicted
                         probability per disease given cell.
         weighting: Assigns weight to :math:`p(d_i|x)` and :math:`\hat{p}(d_i|x)` by either
-                 'cases' or 'timespace'. If None, no weighting is applied.
+                 'cases' or 'timespace'. If None, no weighting is applied. You can use
+                 a 1-D numpy array where each entry is the weighting per cell in the same
+                 order as the `cases` DataFrame
         gauss_dims: Only valid if weight is 'timespace'. Assigns over which coordinate cells
                     spatial weighting should happen.
         covariance_diag: Only valid if weight is 'timespace'.
@@ -214,9 +218,13 @@ def _npv(true, pred, sample_weight):
 def conf_matrix(
     cases: pd.DataFrame,
     signals: pd.DataFrame,
-    threshold_true: float,
-    threshold_pred: float,
-) -> dict[str, list[list[int]]]:
+    threshold_true: Optional[float] = None,
+    threshold_pred: Optional[float] = None,
+    weighting: Optional[Union[str, np.ndarray]] = None,
+    gauss_dims: Optional[list[str]] = None,
+    covariance_diag: Optional[list[float]] = None,
+    time_axis: Optional[str] = None,
+) -> dict[str, np.ndarray]:
     r"""Calculate epidemiologically meaningful confusion matrices.
 
     Given case count data of infectious diseases, information on cases linked through an
@@ -247,11 +255,32 @@ def conf_matrix(
         threshold_true: To binarize :math:`p(d_i|x)`, the true probability per disease given cell.
         threshold_pred: To binarize :math:`\hat{p}(d_i|x)`, the predicted probability
                         per disease given cell.
+        weighting: Assigns weight to :math:`p(d_i|x)` and :math:`\hat{p}(d_i|x)` by either
+                 'cases' or 'timespace'. If None, no weighting is applied. You can use
+                 a 1-D numpy array where each entry is the weighting per cell in the same
+                 order as the `cases` DataFrame
+        gauss_dims: Only valid if weight is 'timespace'. Assigns over which coordinate cells
+                    spatial weighting should happen.
+        covariance_diag: Only valid if weight is 'timespace'.
+                         Specifies the n-dim. Gaussian covariance.
+        time_axis: Only valid if weight is 'timespace'. Assigns over which coordinates
+                   temporal weighting should happen.
 
     Returns:
         Confusion matrix per data label.
     """
-    return ScoreCalculator(cases, signals).class_based_conf_mat(threshold_true, threshold_pred)
+    if threshold_true is None:
+        threshold_true = 0
+    threshold_pred = threshold_pred or 0.5
+    return ScoreCalculator(cases, signals).calc_score(
+        scorer=sk_metrics.confusion_matrix,
+        p_thresh=threshold_true,
+        p_hat_thresh=threshold_pred,
+        weighting=weighting,
+        gauss_dims=gauss_dims,
+        covariance_diag=covariance_diag,
+        time_axis=time_axis,
+    )
 
 
 def timeliness(
