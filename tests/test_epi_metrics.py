@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+import pytest
 
 from epiquark import EpiMetrics
 
@@ -8,6 +9,17 @@ def test_timeliness(paper_example_epimetric: EpiMetrics) -> None:
     timeliness = paper_example_epimetric.timeliness("x2", 4)
     timeliness_expected = {"one": 0.0, "three": 0.0, "two": 0.0}
     timeliness == timeliness_expected
+
+
+def test_timeliness_type_check(paper_example_epimetric: EpiMetrics) -> None:
+    with pytest.raises(ValueError, match="time_axis must be of type str."):
+        paper_example_epimetric.timeliness(2, 4)  # type: ignore
+
+    with pytest.raises(ValueError, match="D must be a positive integer."):
+        paper_example_epimetric.timeliness("x2", -4)  # type: ignore
+
+    with pytest.raises(ValueError, match="D must be a positive integer."):
+        paper_example_epimetric.timeliness("x2", 1.5)  # type: ignore
 
 
 def test_calc_delay() -> None:

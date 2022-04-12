@@ -370,8 +370,12 @@ class EpiMetrics(_DataLoader):
         self.outbreak_signals = list(set(self.SIGNALS_LABELS) - set(["endemic", "non_case"]))
 
     def timeliness(self, time_axis: str, D: int, signal_threshold: float = 0) -> dict[str, float]:
-        # TODO: fehler werfen, wenn time_axis nicht str ist
-        # TODO: Check if D is a positive integer
+        if not isinstance(time_axis, str):
+            raise ValueError("time_axis must be of type str.")
+
+        if not (isinstance(D, int) and (D > 0)):
+            raise ValueError("D must be a positive integer.")
+
         signals_agg = (
             self.signals.query("signal_label.isin(@self.outbreak_signals)")
             .assign(value=lambda x: np.where(x["value"] > signal_threshold, 1, 0))
