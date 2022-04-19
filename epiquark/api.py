@@ -102,10 +102,11 @@ def score(
                  'cases' or 'timespace'. If None, no weighting is applied. You can use
                  a 1-D numpy array where each entry is the weighting per cell in the same
                  order as the `cases` DataFrame
-        gauss_dims: Only valid if weight is 'timespace'. Assigns over which coordinate cells
-                    spatial weighting should happen.
-        covariance_diag: Only valid if weight is 'timespace'.
-                         Specifies the n-dim. Gaussian covariance.
+        time_space_weighting: Only valid if weight is 'timespace'. Dict with dimension of
+                              the case data over which space-weighting should be applied
+                              as keys.
+                              Weighting is controlled by covariance value of the n-dim
+                              Gaussian as values.
         time_axis: Only valid if weight is 'timespace'. Assigns over which coordinates
                    temporal weighting should happen.
 
@@ -254,11 +255,12 @@ def conf_matrix(
         weighting: Assigns weight to :math:`p(d_i|x)` and :math:`\hat{p}(d_i|x)` by either
                  'cases' or 'timespace'. If None, no weighting is applied. You can use
                  a 1-D numpy array where each entry is the weighting per cell in the same
-                 order as the `cases` DataFrame
-        gauss_dims: Only valid if weight is 'timespace'. Assigns over which coordinate cells
-                    spatial weighting should happen.
-        covariance_diag: Only valid if weight is 'timespace'.
-                         Specifies the n-dim. Gaussian covariance.
+                 order as the `cases` DataFrame.
+        time_space_weighting: Only valid if weight is 'timespace'. Dict with dimension of
+                              the case data over which space-weighting should be applied
+                              as keys.
+                              Weighting is controlled by covariance value of the n-dim
+                              Gaussian as values.
         time_axis: Only valid if weight is 'timespace'. Assigns over which coordinates
                    temporal weighting should happen.
 

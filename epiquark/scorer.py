@@ -363,8 +363,8 @@ class TimeSpaciness(_DataLoader):
         """Creates spatial gauss weights for scoring.
 
         Args:
-            gauss_dims: Dimension of the case data that represent space.
-            covariance_diag: The covariance over each spatial dim in the same order as gauss_dims.
+            time_space_weighting: Dict with dimension of the case data that represent space and
+                                  the covariance over each spatial dim as the value
 
         Returns:
             Weights per data_label and spatial dimension.
