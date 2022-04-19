@@ -15,37 +15,42 @@ def test_timeliness_type_check(paper_example_timeliness: Timeliness) -> None:
         paper_example_timeliness.timeliness(2, 4)  # type: ignore
 
     with pytest.raises(ValueError, match="D must be a positive integer."):
-        paper_example_timeliness.timeliness("x2", -4)  # type: ignore
+        paper_example_timeliness.timeliness("x2", -4)
 
     with pytest.raises(ValueError, match="D must be a positive integer."):
         paper_example_timeliness.timeliness("x2", 1.5)  # type: ignore
 
 
 def test_calc_delay() -> None:
-    # TODO: ajdust to new delay being D and not len(df) when precondition are not met.
-    delay_3 = pd.DataFrame({"value_cases": [0, 0, 0], "value_signals": [0, 0, 1]})
-    assert 3 == Timeliness._calc_delay(delay_3, 4)
-    delay_3 = pd.DataFrame({"value_cases": [0, 0, 1], "value_signals": [0, 0, 0]})
-    assert 3 == Timeliness._calc_delay(delay_3, 4)
-    delay_3 = pd.DataFrame({"value_cases": [0, 0, 0], "value_signals": [0, 0, 0]})
-    assert 3 == Timeliness._calc_delay(delay_3, 4)
-    delay_3 = pd.DataFrame({"value_cases": [0, 1, 0], "value_signals": [1, 0, 0]})
-    assert 3 == Timeliness._calc_delay(delay_3, 4)
+    no_case_nor_signal = pd.DataFrame({"value_cases": [0, 0, 0], "value_signals": [0, 0, 0]})
+    assert 3 == Timeliness._calc_delay(no_case_nor_signal, 3)
+
+    no_case = pd.DataFrame({"value_cases": [0, 0, 0], "value_signals": [0, 1, 0]})
+    assert 3 == Timeliness._calc_delay(no_case, 3)
+
+    no_signal = pd.DataFrame({"value_cases": [0, 0, 0], "value_signals": [0, 1, 0]})
+    assert 3 == Timeliness._calc_delay(no_signal, 3)
+
+    too_early = pd.DataFrame({"value_cases": [0, 1, 0], "value_signals": [1, 0, 0]})
+    assert 3 == Timeliness._calc_delay(too_early, 3)
+
+    delay_larger_D = pd.DataFrame({"value_cases": [1, 1, 0], "value_signals": [0, 0, 1]})
+    assert 2 == Timeliness._calc_delay(delay_larger_D, 2)
 
     delay_2 = pd.DataFrame({"value_cases": [1, 0, 0], "value_signals": [0, 0, 1]})
-    assert 2 == Timeliness._calc_delay(delay_2, 4)
+    assert 2 == Timeliness._calc_delay(delay_2, 3)
     delay_2 = pd.DataFrame({"value_cases": [1, 0, 1], "value_signals": [0, 0, 1]})
-    assert 2 == Timeliness._calc_delay(delay_2, 4)
+    assert 2 == Timeliness._calc_delay(delay_2, 3)
 
     delay_1 = pd.DataFrame({"value_cases": [0, 1, 1], "value_signals": [0, 0, 1]})
-    assert 1 == Timeliness._calc_delay(delay_1, 4)
+    assert 1 == Timeliness._calc_delay(delay_1, 3)
     delay_1 = pd.DataFrame({"value_cases": [1, 1, 1], "value_signals": [0, 1, 1]})
-    assert 1 == Timeliness._calc_delay(delay_1, 4)
+    assert 1 == Timeliness._calc_delay(delay_1, 3)
 
     delay_0 = pd.DataFrame({"value_cases": [0, 1, 0], "value_signals": [0, 1, 1]})
-    assert 0 == Timeliness._calc_delay(delay_0, 4)
+    assert 0 == Timeliness._calc_delay(delay_0, 3)
     delay_0 = pd.DataFrame({"value_cases": [1, 1, 0], "value_signals": [1, 1, 1]})
-    assert 0 == Timeliness._calc_delay(delay_0, 4)
+    assert 0 == Timeliness._calc_delay(delay_0, 3)
 
 
 def test_time_masking(shared_datadir, paper_example_timespaciness: TimeSpaciness) -> None:

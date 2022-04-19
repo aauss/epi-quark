@@ -497,10 +497,10 @@ class Timeliness(_DataLoader):
     def _calc_delay(df: pd.DataFrame, D: int) -> int:
         first_case_idx = (df["value_cases"] == 1).argmax()
         first_signal_idx = (df["value_signals"] == 1).argmax()
+        delay = first_signal_idx - first_case_idx
         if (df["value_cases"].sum() == 0) or (df["value_signals"].sum() == 0):
             return D
-        elif first_signal_idx < first_case_idx:
+        elif not (0 <= delay <= D):
             return D
-        # TODO: also check that delay is not larger than D
         else:
-            return first_signal_idx - first_case_idx
+            return delay
