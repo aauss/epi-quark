@@ -66,7 +66,7 @@ def test_score(paper_example_score: ScoreCalculator) -> None:
         "non_case": 1.0,
         "one": 0.7499999999999999,
         "three": 0.0,
-        "two": 0.22222222222222224,
+        "two": 0.25,
     }
 
 
@@ -260,8 +260,8 @@ def test_conf_mat(paper_example_score: ScoreCalculator) -> None:
         "endemic": np.array([[16, 4], [1, 4]]),
         "non_case": np.array([[13, 0], [0, 12]]),
         "one": np.array([[20, 2], [0, 3]]),
-        "three": np.array([[18, 5], [2, 0]]),
-        "two": np.array([[17, 4], [3, 1]]),
+        "three": np.array([[19, 5], [1, 0]]),
+        "two": np.array([[18, 4], [2, 1]]),
     }
     np.testing.assert_equal(confusion_matrix, confusion_matrix_expected)
 
@@ -272,7 +272,7 @@ def test_conf_mat(paper_example_score: ScoreCalculator) -> None:
         "endemic": np.array([[0, 1], [1, 8]]),
         "non_case": np.array([[0, 0], [0, 12]]),
         "one": np.array([[0, 0], [0, 3]]),
-        "three": np.array([[0, 0], [3, 0]]),
-        "two": np.array([[0, 0], [3, 1]]),
+        "three": np.array([[1, 0], [2, 0]]),
+        "two": np.array([[1, 0], [2, 1]]),
     }
     np.testing.assert_equal(confusion_matrix_weighted, confusion_matrix_weighted_expected)

@@ -311,12 +311,18 @@ class ScoreCalculator(_ScoreBase):
         # TODO: change to strict larger than.
         # If p_thresh is one p(d_i) is one, label positive anyway
         if p_thresh:
-            eval_df = eval_df.assign(true=np.where(eval_df["p(d_i)"] >= p_thresh, 1, 0))
+            if p_thresh == 1:
+                eval_df = eval_df.assign(true=np.where(eval_df["p(d_i)"] >= p_thresh, 1, 0))
+            else:
+                eval_df = eval_df.assign(true=np.where(eval_df["p(d_i)"] > p_thresh, 1, 0))
         else:
             eval_df = eval_df.rename(columns={"p(d_i)": "true"})
 
         if p_hat_thresh:
-            eval_df = eval_df.assign(pred=np.where(eval_df["p^(d_i)"] >= p_hat_thresh, 1, 0))
+            if p_hat_thresh == 1:
+                eval_df = eval_df.assign(pred=np.where(eval_df["p^(d_i)"] >= p_hat_thresh, 1, 0))
+            else:
+                eval_df = eval_df.assign(pred=np.where(eval_df["p^(d_i)"] > p_hat_thresh, 1, 0))
         else:
             eval_df = eval_df.rename(columns={"p^(d_i)": "pred"})
         return eval_df
