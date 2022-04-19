@@ -42,8 +42,7 @@ def score(
     threshold_true: Optional[float] = None,
     threshold_pred: Optional[float] = None,
     weighting: Optional[Union[str, np.ndarray]] = None,
-    gauss_dims: Optional[list[str]] = None,
-    covariance_diag: Optional[list[float]] = None,
+    time_space_weighting: dict[str, float] = None,
     time_axis: Optional[str] = None,
 ):
     r"""Calculates epidemiologically meaningful scores.
@@ -139,8 +138,7 @@ def score(
         p_thresh=threshold_true,
         p_hat_thresh=threshold_pred,
         weighting=weighting,
-        gauss_dims=gauss_dims,
-        covariance_diag=covariance_diag,
+        time_space_weighting=time_space_weighting,
         time_axis=time_axis,
     )
 
@@ -221,8 +219,7 @@ def conf_matrix(
     threshold_true: Optional[float] = None,
     threshold_pred: Optional[float] = None,
     weighting: Optional[Union[str, np.ndarray]] = None,
-    gauss_dims: Optional[list[str]] = None,
-    covariance_diag: Optional[list[float]] = None,
+    time_space_weighting: dict[str, float] = None,
     time_axis: Optional[str] = None,
 ) -> dict[str, np.ndarray]:
     r"""Calculate epidemiologically meaningful confusion matrices.
@@ -277,8 +274,7 @@ def conf_matrix(
         p_thresh=threshold_true,
         p_hat_thresh=threshold_pred,
         weighting=weighting,
-        gauss_dims=gauss_dims,
-        covariance_diag=covariance_diag,
+        time_space_weighting=time_space_weighting,
         time_axis=time_axis,
     )
 

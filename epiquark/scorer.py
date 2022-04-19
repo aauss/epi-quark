@@ -269,12 +269,9 @@ class ScoreCalculator(_ScoreBase):
         p_thresh: Optional[float] = None,
         p_hat_thresh: Optional[float] = None,
         weighting: Optional[str] = None,
-        gauss_dims: Optional[list[str]] = None,
-        covariance_diag: Optional[list[float]] = None,
+        time_space_weighting: dict[str, float] = None,
         time_axis: Optional[str] = None,
     ) -> dict[str, Union[float, np.ndarray]]:
-        # TODO: replace covariance_diag and gauss_dims
-        #  with dict: timespace_weights = {"x1": 3, "x2": 4}
         eval_df = self._thresholded_eval_df(p_thresh, p_hat_thresh)
         if weighting is None:
             eval_df["weight"] = 1
@@ -283,12 +280,9 @@ class ScoreCalculator(_ScoreBase):
         elif weighting == "timespace":
             # Underscore is fix due to Optional in calc_score and no Optional in TimeSpaciness
             # https://github.com/python/mypy/issues/7268
-            _gauss_dims = gauss_dims
-            _covariance_diag = covariance_diag
+            _time_space_weighting = time_space_weighting
             _time_axis = time_axis
-            eval_df = self._apply_timespace_weighting(
-                eval_df, _gauss_dims, _covariance_diag, _time_axis
-            )
+            eval_df = self._apply_timespace_weighting(eval_df, _time_space_weighting, _time_axis)
         else:
             raise ValueError("weighting must be None, 'cases', or 'timespace'.")
 
@@ -303,13 +297,9 @@ class ScoreCalculator(_ScoreBase):
             self.cases, left_on=self.COORDS + ["d_i"], right_on=self.COORDS + ["data_label"]
         ).rename(columns={"value": "weight"})
 
-    def _apply_timespace_weighting(
-        self, eval_df, gauss_dims, covariance_diag, time_axis
-    ) -> pd.DataFrame:
+    def _apply_timespace_weighting(self, eval_df, time_space_weighting, time_axis) -> pd.DataFrame:
         timespaciness = TimeSpaciness(self.cases.query("data_label!='non_case'"), self.signals)
-        timespace_weights = timespaciness.timespace_weighting(
-            gauss_dims, covariance_diag, time_axis
-        )
+        timespace_weights = timespaciness.timespace_weighting(time_space_weighting, time_axis)
         return eval_df.merge(
             timespace_weights,
             left_on=timespaciness.COORDS + ["d_i"],
@@ -370,8 +360,7 @@ class TimeSpaciness(_DataLoader):
 
     def timespace_weighting(
         self,
-        gauss_dims: list[str],
-        covariance_diag: Optional[list[float]] = None,
+        time_space_weighting: dict[str, float],
         time_axis: Optional[str] = None,
     ) -> pd.DataFrame:
         """Creates spatial gauss weights for scoring.
@@ -383,11 +372,8 @@ class TimeSpaciness(_DataLoader):
         Returns:
             Weights per data_label and spatial dimension.
         """
-        if covariance_diag is None:
-            covariance_diag = np.diag(np.ones(len(gauss_dims)))
-        else:
-            covariance_diag = np.diag(covariance_diag)
-
+        gauss_dims = list(time_space_weighting.keys())
+        covariance_diag = np.diag(list(time_space_weighting.values()))
         coords_system = self._gauss_coord_system(gauss_dims)
         case_coords_dict = self._coords_where_more_than_one_case_per_label(
             gauss_dims, coords_system

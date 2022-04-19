@@ -1,4 +1,3 @@
-import numpy as np
 import pandas as pd
 import pytest
 
@@ -63,16 +62,14 @@ def test_time_masking(shared_datadir, paper_example_timespaciness: TimeSpaciness
 
 
 def test_timespace_weighting(shared_datadir, paper_example_timespaciness: TimeSpaciness) -> None:
-    gauss_weights = paper_example_timespaciness.timespace_weighting(["x1", "x2"])
-    expected = pd.read_csv(shared_datadir / "paper_example/gauss_weights.csv")
-    pd.testing.assert_frame_equal(gauss_weights, expected)
-
     gauss_weights = paper_example_timespaciness.timespace_weighting(
-        ["x1", "x2"], np.diag(np.ones(2))
+        time_space_weighting={"x1": 1, "x2": 1},
     )
     expected = pd.read_csv(shared_datadir / "paper_example/gauss_weights.csv")
     pd.testing.assert_frame_equal(gauss_weights, expected)
 
-    gauss_weights = paper_example_timespaciness.timespace_weighting(["x1", "x2"], time_axis="x2")
+    gauss_weights = paper_example_timespaciness.timespace_weighting(
+        {"x1": 1, "x2": 1}, time_axis="x2"
+    )
     expected = pd.read_csv(shared_datadir / "paper_example/gauss_weights_timemask.csv")
     pd.testing.assert_frame_equal(gauss_weights, expected)
