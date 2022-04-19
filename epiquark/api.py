@@ -34,7 +34,6 @@ class _ThreshRequired:
         return thresh_text
 
 
-# TODO: add time-space function for API. But how to aggregate over cells?
 def score(
     cases: pd.DataFrame,
     signals: pd.DataFrame,

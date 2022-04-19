@@ -22,29 +22,30 @@ def test_timeliness_type_check(paper_example_timeliness: Timeliness) -> None:
 
 
 def test_calc_delay() -> None:
+    # TODO: ajdust to new delay being D and not len(df) when precondition are not met.
     delay_3 = pd.DataFrame({"value_cases": [0, 0, 0], "value_signals": [0, 0, 1]})
-    assert 3 == Timeliness._calc_delay(delay_3)
+    assert 3 == Timeliness._calc_delay(delay_3, 4)
     delay_3 = pd.DataFrame({"value_cases": [0, 0, 1], "value_signals": [0, 0, 0]})
-    assert 3 == Timeliness._calc_delay(delay_3)
+    assert 3 == Timeliness._calc_delay(delay_3, 4)
     delay_3 = pd.DataFrame({"value_cases": [0, 0, 0], "value_signals": [0, 0, 0]})
-    assert 3 == Timeliness._calc_delay(delay_3)
+    assert 3 == Timeliness._calc_delay(delay_3, 4)
     delay_3 = pd.DataFrame({"value_cases": [0, 1, 0], "value_signals": [1, 0, 0]})
-    assert 3 == Timeliness._calc_delay(delay_3)
+    assert 3 == Timeliness._calc_delay(delay_3, 4)
 
     delay_2 = pd.DataFrame({"value_cases": [1, 0, 0], "value_signals": [0, 0, 1]})
-    assert 2 == Timeliness._calc_delay(delay_2)
+    assert 2 == Timeliness._calc_delay(delay_2, 4)
     delay_2 = pd.DataFrame({"value_cases": [1, 0, 1], "value_signals": [0, 0, 1]})
-    assert 2 == Timeliness._calc_delay(delay_2)
+    assert 2 == Timeliness._calc_delay(delay_2, 4)
 
     delay_1 = pd.DataFrame({"value_cases": [0, 1, 1], "value_signals": [0, 0, 1]})
-    assert 1 == Timeliness._calc_delay(delay_1)
+    assert 1 == Timeliness._calc_delay(delay_1, 4)
     delay_1 = pd.DataFrame({"value_cases": [1, 1, 1], "value_signals": [0, 1, 1]})
-    assert 1 == Timeliness._calc_delay(delay_1)
+    assert 1 == Timeliness._calc_delay(delay_1, 4)
 
     delay_0 = pd.DataFrame({"value_cases": [0, 1, 0], "value_signals": [0, 1, 1]})
-    assert 0 == Timeliness._calc_delay(delay_0)
+    assert 0 == Timeliness._calc_delay(delay_0, 4)
     delay_0 = pd.DataFrame({"value_cases": [1, 1, 0], "value_signals": [1, 1, 1]})
-    assert 0 == Timeliness._calc_delay(delay_0)
+    assert 0 == Timeliness._calc_delay(delay_0, 4)
 
 
 def test_time_masking(shared_datadir, paper_example_timespaciness: TimeSpaciness) -> None:

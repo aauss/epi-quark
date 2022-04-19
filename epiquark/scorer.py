@@ -152,9 +152,6 @@ class _DataLoader:
             )
 
 
-# TODO: Check F1 score sample weight / normalization
-
-
 class _ScoreBase(_DataLoader):
     """Class that contains main logic to calculate p(d_i) and p^(d_i)."""
 
@@ -378,7 +375,6 @@ class TimeSpaciness(_DataLoader):
         case_coords_dict = self._coords_where_more_than_one_case_per_label(
             gauss_dims, coords_system
         )
-        # check that if time is available, that it is used in the gaussian distr.
         weights = {}
         for data_label, case_coords in case_coords_dict.items():
             mvns = [multivariate_normal(case_coord, covariance_diag) for case_coord in case_coords]
@@ -493,24 +489,18 @@ class Timeliness(_DataLoader):
                 on=time_axis,
             )
             .groupby("data_label")
-            .apply(self._calc_delay)
+            .apply(lambda x: self._calc_delay(df=x, D=D))
         )
-        # TODO: sollte ohne clip auskommen
-        return dict(
-            (1 - delays_per_label / D).clip(0, 1)
-        )  # TODO: check in paper if clipping is really necessary
+        return dict((1 - delays_per_label / D))
 
     @staticmethod
-    def _calc_delay(df: pd.DataFrame) -> int:
-        max_delay = len(df)
-        # should ideally work with gauss weighting
+    def _calc_delay(df: pd.DataFrame, D: int) -> int:
         first_case_idx = (df["value_cases"] == 1).argmax()
         first_signal_idx = (df["value_signals"] == 1).argmax()
-        # erst delay berechnen, über den delay die bedingung (ist zwischen 0 und D) prüfen
-        #  und dann timeliness zurückgeben
         if (df["value_cases"].sum() == 0) or (df["value_signals"].sum() == 0):
-            return max_delay
+            return D
         elif first_signal_idx < first_case_idx:
-            return max_delay
+            return D
+        # TODO: also check that delay is not larger than D
         else:
             return first_signal_idx - first_case_idx
