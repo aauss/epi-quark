@@ -10,7 +10,7 @@ Welcome to epi-quark's documentation!
 
 The motivation for this library is the lack of scoring methods that produces comparable scores for algorithms that use different aggregation and testing strategies.
 
-Furthermore, this library also allows you to apply epidemiologically meaningful weighting. We can weight by case counts (detecting large outbreaks is more important than detecting small ones) or by spatio-temporal accuracy, i.e., we prefer detected outbreaks to be precise in location, onset, and length of the outbreak. 
+Furthermore, this library also allows you to apply epidemiologically meaningful weighting. We can weight by case counts (detecting large outbreaks is more important than detecting small ones) or by spatio-temporal accuracy, i.e., we prefer detection close to the location, onset date, and duration of the actual outbreak. 
 
 .. note::
 

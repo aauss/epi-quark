@@ -11,7 +11,7 @@ def impute_signals(
     coords: list[str],
     agg_function: Optional[str] = "min",
 ) -> pd.DataFrame:
-    """Calculates signals for endemic and non cases when they are missing."""
+    """Calculates signals for endemic and non-case cases when they are missing."""
 
     assigns = _column_imputation(signals)
     aggs = dict.fromkeys(list(assigns), agg_function)
