@@ -13,7 +13,7 @@
 
 In the field of disease outbreak detection, qualitatively different families of algorithms are equally frequent used such as Farrington Flexible and SaTScan. However, comparing the performance of different algorithm families is not trivial. Inputs and outputs differ vastly between algorithms and therefore make a clear quantitative comparison difficult.
 
-Our score offers a solution to make formerly non-comparable approaches comparable.
+The approach implemented by epi-quark to compute scores allows such comparisons. It is described in detail in an [accompanying article](https://doi.org/10.1101/2022.03.16.22272469).
 
 ## Installation
 
