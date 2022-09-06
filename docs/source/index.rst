@@ -6,7 +6,7 @@
 Welcome to epi-quark's documentation!
 =====================================
 
-**epi-quark** is a scoring library that helps to evaluate the prediction, detection, and annotation of infectious disease outbreaks. 
+**epi-quark** is a library that, based on labeled data, scores outbreak detection, annotation or prediction algorithms by framing their tasks as multi-class and multi-label classification.
 
 The motivation for this library is the lack of scoring methods that produces comparable scores for algorithms that use different aggregation and testing strategies.
 
