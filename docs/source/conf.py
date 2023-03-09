@@ -20,7 +20,7 @@ print(pathlib.Path(__file__).parents[2].resolve().as_posix())
 # -- Project information -----------------------------------------------------
 
 project = "epi-quark"
-copyright = "2021, Auss Abbood & Stéphane Ghozzi"
+copyright = "2022, Auss Abbood & Stéphane Ghozzi"
 author = "Auss Abbood & Stéphane Ghozzi"
 
 # The full version, including alpha/beta/rc tags

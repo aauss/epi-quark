@@ -11,13 +11,15 @@
 
 ## Motivation
 
-In the field of disease outbreak detection, qualitatively different families of algorithms are equally frequent used such as Farrington Flexible and SaTScan. However, comparing the performance of different algorithm families is not trivial. Inputs and outputs differ vastly between algorithms and therefore make a clear quantitative comparison difficult.
+In the field of disease outbreak detection, different types of algorithms are frequently used such as Farrington or SaTScan. Measuring and comparing their performances of different algorithm families is made difficult by a lack of a common approach in the community, different types of output, as well as different settings of implementation.
 
-Our score offers a solution to make formerly non-comparable approaches comparable.
+The framework implemented in epi-quark to compute scores allows such evaluation and comparisons. 
+It is based on an heuristic to compare algorithm outputs at different aggregation scales and on expert-annotated infection cases.
+Further details can be found in an [accompanying paper](https://doi.org/10.1101/2022.03.16.22272469).
 
 ## Installation
 
-To run the notebooks, build the docs, run the tests, and to use our score, you need to install the packages listed in `env-dev.yml`. If you use conda, simply run
+To use epi-quark and compute scores, run the notebooks, build the docs, run the tests, you need to install the packages listed in `env-dev.yml`. If you use conda, run
 
 ```
 conda env create -f env-dev.yml
@@ -29,19 +31,20 @@ Afterwards, run
 conda activate epi-quark
 ```
 
-to activate the conda environment. You should be read to go.
+to activate the conda environment. You should be ready to go.
 
 ### Docs
 
-If you want to build the documentation, run
+To build the documentation, run
 
 ```
 cd docs/
 make html
 ```
-which will build the sphinx-based documentation. Simply open the `index.html` which will be created and saved under `docs/build/html/index.html`.
+which will build the sphinx-based HTML documentation. Open the index page `docs/build/html/index.html` to access and navigate it.
 
-### pre-commit
+### Pre-commit
+
 If you want to check your code before committing it, you can use `pre-commit` to run CI checks set up for this repo.
 
 To install git hook scripts to evaluate your code, run 

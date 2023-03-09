@@ -69,7 +69,7 @@ class _DataLoader:
             )
 
     def _impute_non_case(self, cases: pd.DataFrame) -> pd.DataFrame:
-        """Imputes case numbers for non_case column.
+        """Imputes case numbers for non_case class.
 
         Args:
             data: DataFrame with case numbers but without information on non_cases.
@@ -92,7 +92,7 @@ class _DataLoader:
     ) -> pd.DataFrame:
         self._check_case_coords_subset_of_signal_coords(signals)
         self._check_coords_points_are_case_subset(signals, cases)
-        self._check_signal_label_consitency(signals)
+        self._check_signal_label_consistency(signals)
         self._check_signals_floats_between_zero_one(signals)
         self._check_must_have_signals(signals)
         self._check_empty_cells(signals)
@@ -115,7 +115,7 @@ class _DataLoader:
         if not (unique_case_coords - unique_signale_coords == set()):
             raise ValueError("Coordinates of cases must be subset of signals' coordinates")
 
-    def _check_signal_label_consitency(self, signals) -> None:
+    def _check_signal_label_consistency(self, signals) -> None:
         unique_signal_label_not_eq_signal_labels_per_coord = signals.groupby(self.COORDS)[
             "signal_label"
         ].apply(lambda x: list(x) != list(signals["signal_label"].unique()))
@@ -153,29 +153,29 @@ class _DataLoader:
 
 
 class _ScoreBase(_DataLoader):
-    """Class that contains main logic to calculate p(d_i) and p^(d_i)."""
+    """Class that contains main logic to calculate p(d) and p^(d)."""
 
     def __init__(self, cases, signals) -> None:
         super().__init__(cases, signals)
 
     def _eval_df(self) -> pd.DataFrame:
-        """Creates DataFrame with p(d_i | x) and p^(d_i | x)"""
+        """Creates DataFrame with p(d| x) and p^(d| x)"""
         return self._p_di_given_x().merge(
             self._p_hat_di(),
-            on=self.COORDS + ["d_i"],
+            on=self.COORDS + ["d"],
         )
 
     def _p_hat_di(self) -> pd.DataFrame:
-        """Calculates p^(d_i | x) = sum( p(d_i| s_j, x) p(s_j, x) )"""
+        """Calculates p^(d| x) = sum( p(d|s, x) p(s, x) )"""
         p_hat_di = self._p_di_given_sj().merge(
             self._p_sj_given_x(),
-            on="s_j",
+            on="s",
         )
-        p_hat_di.loc[:, "p(d_i,s_j|x)"] = p_hat_di["posterior"] * p_hat_di["prior"]
+        p_hat_di.loc[:, "p(d,s|x)"] = p_hat_di["posterior"] * p_hat_di["prior"]
         p_hat_di = (
-            p_hat_di.groupby(self.COORDS + ["d_i"])
-            .agg({"p(d_i,s_j|x)": sum})
-            .rename(columns={"p(d_i,s_j|x)": "p^(d_i)"})
+            p_hat_di.groupby(self.COORDS + ["d"])
+            .agg({"p(d,s|x)": sum})
+            .rename(columns={"p(d,s|x)": "p^(d)"})
             .reset_index()
         )
         return p_hat_di
@@ -183,21 +183,21 @@ class _ScoreBase(_DataLoader):
     def _p_di_given_x(self) -> pd.DataFrame:
         return self.cases.assign(
             value=lambda x: x.value / x.groupby(self.COORDS)["value"].transform("sum").values
-        ).rename(columns={"data_label": "d_i", "value": "p(d_i)"})
+        ).rename(columns={"data_label": "d", "value": "p(d)"})
 
     def _p_sj_given_x(self) -> pd.DataFrame:
-        """p (s_j|x) = w(s, x) / sum_s (w(s,x))"""
+        """p (s|x) = w(s, x) / sum_s (w(s,x))"""
         return (
             self.signals.assign(
                 prior=lambda x: (x.value / x.groupby(self.COORDS)["value"].transform("sum")),
-                s_j=lambda x: x["signal_label"],
+                s=lambda x: x["signal_label"],
             )
             .drop(columns=["signal_label", "value"])
-            .loc[:, self.COORDS + ["prior", "s_j"]]
+            .loc[:, self.COORDS + ["prior", "s"]]
         )
 
     def _p_di_given_sj(self) -> pd.DataFrame:
-        """Calculates p(d_i | s_j) which depends on the use case."""
+        """Calculates p(d|s) which depends on the use case."""
         signal_per_diseases = list(
             product(
                 self.DATA_LABELS,
@@ -206,19 +206,19 @@ class _ScoreBase(_DataLoader):
         )
         df = pd.DataFrame(
             signal_per_diseases,
-            columns=["d_i", "s_j"],
+            columns=["d", "s"],
         )
 
         signal_data_indeces = df.query(
-            "~(s_j.isin(['endemic', 'non_case']) | d_i.isin(['endemic', 'non_case']))"
+            "~(s.isin(['endemic', 'non_case']) | d.isin(['endemic', 'non_case']))"
         ).index
         df.loc[signal_data_indeces, "posterior"] = 1 / len(
             set(self.DATA_LABELS) - set(self.MUST_HAVE_LABELS)
         )
 
-        df.loc[(df.loc[:, "d_i"] == "endemic") & (df.loc[:, "s_j"] == "endemic"), "posterior"] = 1
-        df.loc[(df.loc[:, "d_i"] == "non_case") & (df.loc[:, "s_j"] == "non_case"), "posterior"] = 1
-        # Only NAs left are entries where d_i or s_j in ['endemic', 'non_case'] and d_i != s_j
+        df.loc[(df.loc[:, "d"] == "endemic") & (df.loc[:, "s"] == "endemic"), "posterior"] = 1
+        df.loc[(df.loc[:, "d"] == "non_case") & (df.loc[:, "s"] == "non_case"), "posterior"] = 1
+        # Only NAs left are entries where dors in ['endemic', 'non_case'] and d!=s
         return df.fillna(0)
 
 
@@ -284,14 +284,14 @@ class ScoreCalculator(_ScoreBase):
             raise ValueError("weighting must be None, 'cases', or 'timespace'.")
 
         return (
-            eval_df.groupby("d_i")
+            eval_df.groupby("d")
             .apply(lambda x: scorer(x["true"], x["pred"], sample_weight=x["weight"]))
             .to_dict()
         )
 
     def _apply_case_weighting(self, eval_df: pd.DataFrame) -> pd.DataFrame:
         return eval_df.merge(
-            self.cases, left_on=self.COORDS + ["d_i"], right_on=self.COORDS + ["data_label"]
+            self.cases, left_on=self.COORDS + ["d"], right_on=self.COORDS + ["data_label"]
         ).rename(columns={"value": "weight"})
 
     def _apply_timespace_weighting(self, eval_df, time_space_weighting, time_axis) -> pd.DataFrame:
@@ -299,7 +299,7 @@ class ScoreCalculator(_ScoreBase):
         timespace_weights = timespaciness.timespace_weighting(time_space_weighting, time_axis)
         return eval_df.merge(
             timespace_weights,
-            left_on=timespaciness.COORDS + ["d_i"],
+            left_on=timespaciness.COORDS + ["d"],
             right_on=timespaciness.COORDS + ["data_label"],
             how="left",
         )
@@ -309,22 +309,22 @@ class ScoreCalculator(_ScoreBase):
     ) -> pd.DataFrame:
         eval_df = self._eval_df()
         # TODO: change to strict larger than.
-        # If p_thresh is one p(d_i) is one, label positive anyway
+        # If p_thresh is one p(d) is one, label positive anyway
         if p_thresh:
             if p_thresh == 1:
-                eval_df = eval_df.assign(true=np.where(eval_df["p(d_i)"] >= p_thresh, 1, 0))
+                eval_df = eval_df.assign(true=np.where(eval_df["p(d)"] >= p_thresh, 1, 0))
             else:
-                eval_df = eval_df.assign(true=np.where(eval_df["p(d_i)"] > p_thresh, 1, 0))
+                eval_df = eval_df.assign(true=np.where(eval_df["p(d)"] > p_thresh, 1, 0))
         else:
-            eval_df = eval_df.rename(columns={"p(d_i)": "true"})
+            eval_df = eval_df.rename(columns={"p(d)": "true"})
 
         if p_hat_thresh:
             if p_hat_thresh == 1:
-                eval_df = eval_df.assign(pred=np.where(eval_df["p^(d_i)"] >= p_hat_thresh, 1, 0))
+                eval_df = eval_df.assign(pred=np.where(eval_df["p^(d)"] >= p_hat_thresh, 1, 0))
             else:
-                eval_df = eval_df.assign(pred=np.where(eval_df["p^(d_i)"] > p_hat_thresh, 1, 0))
+                eval_df = eval_df.assign(pred=np.where(eval_df["p^(d)"] > p_hat_thresh, 1, 0))
         else:
-            eval_df = eval_df.rename(columns={"p^(d_i)": "pred"})
+            eval_df = eval_df.rename(columns={"p^(d)": "pred"})
         return eval_df
 
 
