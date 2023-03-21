@@ -1,9 +1,9 @@
-![example branch parameter](https://github.com/aauss/epi-quark/actions/workflows/ci.yml/badge.svg?branch=master)
+![Buildstatus](https://github.com/aauss/epi-quark/actions/workflows/ci.yml/badge.svg?branch=master)
 <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 <a href="https://codecov.io/gh/aauss/epi-quark">
   <img src="https://codecov.io/gh/aauss/epi-quark/branch/master/graph/badge.svg?token=U7VTC00G71"/>
 </a>
-<a href="https://lgtm.com/projects/g/aauss/epi-quark/alerts/"><img alt="Total alerts" src="https://img.shields.io/lgtm/alerts/g/aauss/epi-quark.svg?logo=lgtm&logoWidth=18"/></a>
+![CodeQL](https://github.com/aauss/epi-quark/workflows/CodeQL/badge.svg)
 <a href="https://opensource.org/licenses/MIT"><img alt="Code style: black" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
 
 # Algorithm agnostic evaluation for (disease) outbreak detection

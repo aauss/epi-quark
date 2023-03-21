@@ -14,6 +14,7 @@ jobs:
       - uses: conda-incubator/setup-miniconda@v2
         with:
           use-mamba: true
+          mamba-version: "*"
           activate-environment: epi-quark-env
           environment-file: env-dev.yml
       - name: Lint with Black
