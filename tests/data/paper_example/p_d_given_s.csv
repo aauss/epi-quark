@@ -1,4 +1,4 @@
-d_i,s_j,posterior
+d,s,posterior
 endemic,A,0.0
 endemic,B,0.0
 endemic,C,0.0

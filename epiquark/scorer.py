@@ -160,32 +160,32 @@ class _ScoreBase(_DataLoader):
 
     def _eval_df(self) -> pd.DataFrame:
         """Creates DataFrame with p(d| x) and p^(d| x)"""
-        return self._p_di_given_x().merge(
-            self._p_hat_di(),
+        return self._p_d_given_x().merge(
+            self._p_hat_d(),
             on=self.COORDS + ["d"],
         )
 
-    def _p_hat_di(self) -> pd.DataFrame:
+    def _p_hat_d(self) -> pd.DataFrame:
         """Calculates p^(d| x) = sum( p(d|s, x) p(s, x) )"""
-        p_hat_di = self._p_di_given_sj().merge(
-            self._p_sj_given_x(),
+        p_hat_d = self._p_d_given_s().merge(
+            self._p_s_given_x(),
             on="s",
         )
-        p_hat_di.loc[:, "p(d,s|x)"] = p_hat_di["posterior"] * p_hat_di["prior"]
-        p_hat_di = (
-            p_hat_di.groupby(self.COORDS + ["d"])
+        p_hat_d.loc[:, "p(d,s|x)"] = p_hat_d["posterior"] * p_hat_d["prior"]
+        p_hat_d = (
+            p_hat_d.groupby(self.COORDS + ["d"])
             .agg({"p(d,s|x)": sum})
             .rename(columns={"p(d,s|x)": "p^(d)"})
             .reset_index()
         )
-        return p_hat_di
+        return p_hat_d
 
-    def _p_di_given_x(self) -> pd.DataFrame:
+    def _p_d_given_x(self) -> pd.DataFrame:
         return self.cases.assign(
             value=lambda x: x.value / x.groupby(self.COORDS)["value"].transform("sum").values
         ).rename(columns={"data_label": "d", "value": "p(d)"})
 
-    def _p_sj_given_x(self) -> pd.DataFrame:
+    def _p_s_given_x(self) -> pd.DataFrame:
         """p (s|x) = w(s, x) / sum_s (w(s,x))"""
         return (
             self.signals.assign(
@@ -196,7 +196,7 @@ class _ScoreBase(_DataLoader):
             .loc[:, self.COORDS + ["prior", "s"]]
         )
 
-    def _p_di_given_sj(self) -> pd.DataFrame:
+    def _p_d_given_s(self) -> pd.DataFrame:
         """Calculates p(d|s) which depends on the use case."""
         signal_per_diseases = list(
             product(
