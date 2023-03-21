@@ -63,21 +63,21 @@ def test_scorer_api_no_weighting(shared_datadir) -> None:
         "sensitivity",
         0.5,
         0.2,
-    ) == {"endemic": 0.8, "non_case": 1.0, "one": 1.0, "three": 0.0, "two": 1 / 3}
+    ) == pytest.approx({"endemic": 0.8, "non_case": 1.0, "one": 1.0, "three": 0.0, "two": 1 / 3})
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
         "recall",
         0.5,
         0.2,
-    ) == {"endemic": 0.8, "non_case": 1.0, "one": 1.0, "three": 0.0, "two": 1 / 3}
+    ) == pytest.approx({"endemic": 0.8, "non_case": 1.0, "one": 1.0, "three": 0.0, "two": 1 / 3})
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
         "tpr",
         0.5,
         0.2,
-    ) == {"endemic": 0.8, "non_case": 1.0, "one": 1.0, "three": 0.0, "two": 1 / 3}
+    ) == pytest.approx({"endemic": 0.8, "non_case": 1.0, "one": 1.0, "three": 0.0, "two": 1 / 3})
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -193,28 +193,30 @@ def test_scorer_api_no_weighting(shared_datadir) -> None:
         "fnr",
         0.5,
         0.2,
-    ) == {"endemic": 0.2, "non_case": 0.0, "one": 0.0, "three": 1.0, "two": 2 / 3}
+    ) == pytest.approx({"endemic": 0.2, "non_case": 0.0, "one": 0.0, "three": 1.0, "two": 2 / 3})
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
         "precision",
         0.5,
         0.2,
-    ) == {"endemic": 0.5, "non_case": 1.0, "one": 0.6, "three": 0.0, "two": 0.2}
+    ) == pytest.approx({"endemic": 0.5, "non_case": 1.0, "one": 0.6, "three": 0.0, "two": 0.2})
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
         "ppv",
         0.5,
         0.2,
-    ) == {"endemic": 0.5, "non_case": 1.0, "one": 0.6, "three": 0.0, "two": 0.2}
+    ) == pytest.approx({"endemic": 0.5, "non_case": 1.0, "one": 0.6, "three": 0.0, "two": 0.2})
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
         "npv",
         0.5,
         0.2,
-    ) == {"endemic": 0.9411764705882353, "non_case": 1.0, "one": 1.0, "three": 0.95, "two": 0.9}
+    ) == pytest.approx(
+        {"endemic": 0.9411764705882353, "non_case": 1.0, "one": 1.0, "three": 0.95, "two": 0.9}
+    )
 
 
 def test_scorer_api_case_weighting(shared_datadir) -> None:
@@ -225,7 +227,9 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
         0.5,
         0.2,
         weighting="cases",
-    ) == {"endemic": 0.8888888888888888, "non_case": 1.0, "one": 1.0, "three": 0.0, "two": 0.5}
+    ) == pytest.approx(
+        {"endemic": 0.8888888888888888, "non_case": 1.0, "one": 1.0, "three": 0.0, "two": 0.5}
+    )
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -233,7 +237,9 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
         0.5,
         0.2,
         weighting="cases",
-    ) == {"endemic": 0.8888888888888888, "non_case": 1.0, "one": 1.0, "three": 0.0, "two": 1 / 3}
+    ) == pytest.approx(
+        {"endemic": 0.8888888888888888, "non_case": 1.0, "one": 1.0, "three": 0.0, "two": 1 / 3}
+    )
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -241,7 +247,9 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
         0.5,
         0.2,
         weighting="cases",
-    ) == {"endemic": 0.8888888888888888, "non_case": 1.0, "one": 1.0, "three": 0.0, "two": 1 / 3}
+    ) == pytest.approx(
+        {"endemic": 0.8888888888888888, "non_case": 1.0, "one": 1.0, "three": 0.0, "two": 1 / 3}
+    )
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -249,7 +257,9 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
         0.5,
         0.2,
         weighting="cases",
-    ) == {"endemic": 0.8888888888888888, "non_case": 1.0, "one": 1.0, "three": 0.0, "two": 1 / 3}
+    ) == pytest.approx(
+        {"endemic": 0.8888888888888888, "non_case": 1.0, "one": 1.0, "three": 0.0, "two": 1 / 3}
+    )
 
     result = score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
@@ -280,7 +290,9 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
         0.5,
         0.2,
         weighting="cases",
-    ) == {"endemic": -0.1111111111111111, "non_case": 0.0, "one": 0.0, "three": 0.0, "two": 1 / 3}
+    ) == pytest.approx(
+        {"endemic": -0.1111111111111111, "non_case": 0.0, "one": 0.0, "three": 0.0, "two": 1 / 3}
+    )
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -358,7 +370,9 @@ def test_scorer_api_case_weighting(shared_datadir) -> None:
         0.5,
         0.2,
         weighting="cases",
-    ) == {"endemic": 0.1111111111111111, "non_case": 0.0, "one": 0.0, "three": 1.0, "two": 2 / 3}
+    ) == pytest.approx(
+        {"endemic": 0.1111111111111111, "non_case": 0.0, "one": 0.0, "three": 1.0, "two": 2 / 3}
+    )
     result = score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -413,13 +427,15 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         weighting="timespace",
         time_space_weighting={"x1": 1},
         time_axis="x2",
-    ) == {
-        "endemic": 0.6401730435463963,
-        "non_case": 1.0,
-        "one": 0.8040975332158111,
-        "three": 0.0,
-        "two": 0.2883980180668917,
-    }
+    ) == pytest.approx(
+        {
+            "endemic": 0.6401730435463963,
+            "non_case": 1.0,
+            "one": 0.8040975332158111,
+            "three": 0.0,
+            "two": 0.2883980180668917,
+        }
+    )
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -429,13 +445,15 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         weighting="timespace",
         time_space_weighting={"x1": 1},
         time_axis="x2",
-    ) == {
-        "endemic": 0.764115797871024,
-        "non_case": 1.0,
-        "one": 1.0,
-        "three": 0.0,
-        "two": 0.33333333333333337,
-    }
+    ) == pytest.approx(
+        {
+            "endemic": 0.764115797871024,
+            "non_case": 1.0,
+            "one": 1.0,
+            "three": 0.0,
+            "two": 0.33333333333333337,
+        }
+    )
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -445,13 +463,15 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         weighting="timespace",
         time_space_weighting={"x1": 1},
         time_axis="x2",
-    ) == {
-        "endemic": 0.764115797871024,
-        "non_case": 1.0,
-        "one": 1.0,
-        "three": 0.0,
-        "two": 0.33333333333333337,
-    }
+    ) == pytest.approx(
+        {
+            "endemic": 0.764115797871024,
+            "non_case": 1.0,
+            "one": 1.0,
+            "three": 0.0,
+            "two": 0.33333333333333337,
+        }
+    )
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -461,13 +481,15 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         weighting="timespace",
         time_space_weighting={"x1": 1},
         time_axis="x2",
-    ) == {
-        "endemic": 0.764115797871024,
-        "non_case": 1.0,
-        "one": 1.0,
-        "three": 0.0,
-        "two": 0.33333333333333337,
-    }
+    ) == pytest.approx(
+        {
+            "endemic": 0.764115797871024,
+            "non_case": 1.0,
+            "one": 1.0,
+            "three": 0.0,
+            "two": 0.33333333333333337,
+        }
+    )
 
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
@@ -477,13 +499,15 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         0.2,
         time_space_weighting={"x1": 1},
         time_axis="x2",
-    ) == {
-        "endemic": 0.8,
-        "non_case": 1.0,
-        "one": 0.9090909090909091,
-        "three": 0.7916666666666666,
-        "two": 0.8181818181818182,
-    }
+    ) == pytest.approx(
+        {
+            "endemic": 0.8,
+            "non_case": 1.0,
+            "one": 0.9090909090909091,
+            "three": 0.7916666666666666,
+            "two": 0.8181818181818182,
+        }
+    )
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -492,13 +516,15 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         0.2,
         time_space_weighting={"x1": 1},
         time_axis="x2",
-    ) == {
-        "endemic": 0.8,
-        "non_case": 1.0,
-        "one": 0.9090909090909091,
-        "three": 0.7916666666666666,
-        "two": 0.8181818181818182,
-    }
+    ) == pytest.approx(
+        {
+            "endemic": 0.8,
+            "non_case": 1.0,
+            "one": 0.9090909090909091,
+            "three": 0.7916666666666666,
+            "two": 0.8181818181818182,
+        }
+    )
 
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
@@ -509,13 +535,15 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         weighting="timespace",
         time_space_weighting={"x1": 1},
         time_axis="x2",
-    ) == {
-        "endemic": 0.527579512894754,
-        "non_case": 1.0,
-        "one": 0.7687461985833044,
-        "three": -0.1159204500759278,
-        "two": 0.14727817191256395,
-    }
+    ) == pytest.approx(
+        {
+            "endemic": 0.527579512894754,
+            "non_case": 1.0,
+            "one": 0.7687461985833044,
+            "three": -0.1159204500759278,
+            "two": 0.14727817191256395,
+        }
+    )
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -524,13 +552,15 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         weighting="timespace",
         time_space_weighting={"x1": 1},
         time_axis="x2",
-    ) == {
-        "endemic": 0.14499248666797407,
-        "non_case": 0.0505799891010867,
-        "one": 0.1069915189009573,
-        "three": 0.08857445837800257,
-        "two": 0.14697023903001608,
-    }
+    ) == pytest.approx(
+        {
+            "endemic": 0.14499248666797407,
+            "non_case": 0.0505799891010867,
+            "one": 0.1069915189009573,
+            "three": 0.08857445837800257,
+            "two": 0.14697023903001608,
+        }
+    )
 
     result = score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
@@ -557,13 +587,15 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         weighting="timespace",
         time_space_weighting={"x1": 1},
         time_axis="x2",
-    ) == {
-        "endemic": 0.21861769964021116,
-        "non_case": 0.7973268665903567,
-        "one": 0.32884147528534324,
-        "three": -0.18093896486554217,
-        "two": -0.16042389293765646,
-    }
+    ) == pytest.approx(
+        {
+            "endemic": 0.21861769964021116,
+            "non_case": 0.7973268665903567,
+            "one": 0.32884147528534324,
+            "three": -0.18093896486554217,
+            "two": -0.16042389293765646,
+        }
+    )
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -571,13 +603,15 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         weighting="timespace",
         time_space_weighting={"x1": 1},
         time_axis="x2",
-    ) == {
-        "endemic": 0.1333385609183281,
-        "non_case": 0.0505799891010867,
-        "one": 0.1069915189009573,
-        "three": 0.0579654094964463,
-        "two": 0.15106763035595444,
-    }
+    ) == pytest.approx(
+        {
+            "endemic": 0.1333385609183281,
+            "non_case": 0.0505799891010867,
+            "one": 0.1069915189009573,
+            "three": 0.0579654094964463,
+            "two": 0.15106763035595444,
+        }
+    )
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -585,13 +619,15 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         weighting="timespace",
         time_space_weighting={"x1": 1},
         time_axis="x2",
-    ) == {
-        "endemic": 0.1864166710366832,
-        "non_case": 0.1011599782021734,
-        "one": 0.21157654307874668,
-        "three": 0.19253843867078885,
-        "two": 0.2518907794255543,
-    }
+    ) == pytest.approx(
+        {
+            "endemic": 0.1864166710366832,
+            "non_case": 0.1011599782021734,
+            "one": 0.21157654307874668,
+            "three": 0.19253843867078885,
+            "two": 0.2518907794255543,
+        }
+    )
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -600,13 +636,15 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         0.2,
         time_space_weighting={"x1": 1},
         time_axis="x2",
-    ) == {
-        "endemic": 0.2,
-        "non_case": 0.0,
-        "one": 0.09090909090909091,
-        "three": 0.20833333333333334,
-        "two": 0.18181818181818182,
-    }
+    ) == pytest.approx(
+        {
+            "endemic": 0.2,
+            "non_case": 0.0,
+            "one": 0.09090909090909091,
+            "three": 0.20833333333333334,
+            "two": 0.18181818181818182,
+        }
+    )
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -615,7 +653,9 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         0.2,
         time_space_weighting={"x1": 1},
         time_axis="x2",
-    ) == {"endemic": 0.2, "non_case": 0.0, "one": 0.0, "three": 1.0, "two": 0.6666666666666666}
+    ) == pytest.approx(
+        {"endemic": 0.2, "non_case": 0.0, "one": 0.0, "three": 1.0, "two": 0.6666666666666666}
+    )
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -624,7 +664,7 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         0.2,
         time_space_weighting={"x1": 1},
         time_axis="x2",
-    ) == {"endemic": 0.5, "non_case": 1.0, "one": 0.6, "three": 0.0, "two": 0.2}
+    ) == pytest.approx({"endemic": 0.5, "non_case": 1.0, "one": 0.6, "three": 0.0, "two": 0.2})
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -633,7 +673,7 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         0.2,
         time_space_weighting={"x1": 1},
         time_axis="x2",
-    ) == {"endemic": 0.5, "non_case": 1.0, "one": 0.6, "three": 0.0, "two": 0.2}
+    ) == pytest.approx({"endemic": 0.5, "non_case": 1.0, "one": 0.6, "three": 0.0, "two": 0.2})
     assert score(
         pd.read_csv("tests/data/paper_example/cases_long.csv"),
         pd.read_csv("tests/data/paper_example/imputed_signals_long.csv"),
@@ -642,7 +682,9 @@ def test_scorer_api_timespace_weighting(shared_datadir) -> None:
         0.2,
         time_space_weighting={"x1": 1},
         time_axis="x2",
-    ) == {"endemic": 0.9411764705882353, "non_case": 1.0, "one": 1.0, "three": 0.95, "two": 0.9}
+    ) == pytest.approx(
+        {"endemic": 0.9411764705882353, "non_case": 1.0, "one": 1.0, "three": 0.95, "two": 0.9}
+    )
 
 
 def test_scorer_api_errors(shared_datadir) -> None:

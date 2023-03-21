@@ -218,7 +218,7 @@ class _ScoreBase(_DataLoader):
 
         df.loc[(df.loc[:, "d"] == "endemic") & (df.loc[:, "s"] == "endemic"), "posterior"] = 1
         df.loc[(df.loc[:, "d"] == "non_case") & (df.loc[:, "s"] == "non_case"), "posterior"] = 1
-        # Only NAs left are entries where dors in ['endemic', 'non_case'] and d!=s
+        # Only NAs left are entries where d or s is in ['endemic', 'non_case'] and d!=s
         return df.fillna(0)
 
 
@@ -309,7 +309,7 @@ class ScoreCalculator(_ScoreBase):
     ) -> pd.DataFrame:
         eval_df = self._eval_df()
         # TODO: change to strict larger than.
-        # If p_thresh is one p(d) is one, label positive anyway
+        # If p_thresh and p(d) is one, label positive anyway
         if p_thresh:
             if p_thresh == 1:
                 eval_df = eval_df.assign(true=np.where(eval_df["p(d)"] >= p_thresh, 1, 0))
