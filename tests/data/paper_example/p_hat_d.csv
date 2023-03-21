@@ -1,4 +1,4 @@
-x1,x2,d_i,p^(d_i)
+x1,x2,d,p^(d)
 0,0,endemic,0.0
 0,0,non_case,1.0
 0,0,one,0.0

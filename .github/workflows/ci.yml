@@ -1,0 +1,35 @@
+name: CI pipeline
+
+on: [push, pull_request]
+
+jobs:
+  run-ci:
+    name: Run CI
+    runs-on: "ubuntu-latest"
+    defaults:
+      run:
+        shell: bash -el {0}
+    steps:
+      - uses: actions/checkout@v3
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          use-mamba: true
+          mamba-version: "*"
+          activate-environment: epi-quark-env
+          environment-file: env-dev.yml
+      - name: Lint with Black
+        run: |
+          black --check epiquark/ tests/
+      - name: Lint with Flake8
+        run: |
+          flake8 epiquark/ tests/
+      - name: Lint with isort
+        run: |
+          isort --check epiquark/ tests/
+      - name: Lint with mypy
+        run: |
+          mypy --package epiquark --package tests
+      - name: Run pytest and collect coverage
+        run: pytest --cov=epiquark tests/ --cov-report=xml
+      - name: Upload coverage reports to Codecov with GitHub Action
+        uses: codecov/codecov-action@v3

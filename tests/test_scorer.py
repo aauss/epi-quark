@@ -14,41 +14,41 @@ def test_non_case_imputation(shared_datadir, paper_example_score: ScoreCalculato
     pd.testing.assert_frame_equal(imputed, imputed_expected, check_dtype=False)
 
 
-def test_p_di_given_x(shared_datadir, paper_example_score: ScoreCalculator) -> None:
-    p_di_given_x = paper_example_score._p_di_given_x()
-    p_di_given_x_expected = pd.read_csv(shared_datadir / "paper_example/p_di_given_x.csv")
-    pd.testing.assert_frame_equal(p_di_given_x, p_di_given_x_expected, check_dtype=False)
+def test_p_d_given_x(shared_datadir, paper_example_score: ScoreCalculator) -> None:
+    p_d_given_x = paper_example_score._p_d_given_x()
+    p_d_given_x_expected = pd.read_csv(shared_datadir / "paper_example/p_d_given_x.csv")
+    pd.testing.assert_frame_equal(p_d_given_x, p_d_given_x_expected, check_dtype=False)
 
 
-def test_p_sj_given_x(shared_datadir, paper_example_score: ScoreCalculator) -> None:
-    p_sj_given_x = paper_example_score._p_sj_given_x()
-    p_sj_given_x_expected = pd.read_csv(shared_datadir / "paper_example/p_sj_given_x_long.csv")
-    pd.testing.assert_frame_equal(p_sj_given_x, p_sj_given_x_expected, check_dtype=False)
+def test_p_s_given_x(shared_datadir, paper_example_score: ScoreCalculator) -> None:
+    p_s_given_x = paper_example_score._p_s_given_x()
+    p_s_given_x_expected = pd.read_csv(shared_datadir / "paper_example/p_s_given_x_long.csv")
+    pd.testing.assert_frame_equal(p_s_given_x, p_s_given_x_expected, check_dtype=False)
 
 
-def test_p_di_given_sj(shared_datadir, paper_example_score: ScoreCalculator) -> None:
-    p_di_given_sj_x = paper_example_score._p_di_given_sj()
-    p_di_given_sj_x_expected = pd.read_csv(shared_datadir / "paper_example/p_di_given_sj.csv")
-    str_cols = list(p_di_given_sj_x.select_dtypes(exclude="number").columns)
+def test_p_d_given_s(shared_datadir, paper_example_score: ScoreCalculator) -> None:
+    p_d_given_s_x = paper_example_score._p_d_given_s()
+    p_d_given_s_x_expected = pd.read_csv(shared_datadir / "paper_example/p_d_given_s.csv")
+    str_cols = list(p_d_given_s_x.select_dtypes(exclude="number").columns)
     pd.testing.assert_frame_equal(
-        p_di_given_sj_x.sort_values(by=str_cols).reset_index(drop=True),
-        p_di_given_sj_x_expected.sort_values(by=str_cols).reset_index(drop=True),
+        p_d_given_s_x.sort_values(by=str_cols).reset_index(drop=True),
+        p_d_given_s_x_expected.sort_values(by=str_cols).reset_index(drop=True),
         check_dtype=False,
     )
 
 
-def test_p_hat_di(shared_datadir, paper_example_score: ScoreCalculator) -> None:
-    p_hat_di = (
-        paper_example_score._p_hat_di().sort_values(by=["x1", "x2", "d_i"]).reset_index(drop=True)
+def test_p_hat_d(shared_datadir, paper_example_score: ScoreCalculator) -> None:
+    p_hat_d = (
+        paper_example_score._p_hat_d().sort_values(by=["x1", "x2", "d"]).reset_index(drop=True)
     )
-    p_hat_di_expected = (
-        pd.read_csv(shared_datadir / "paper_example/p_hat_di.csv")
-        .sort_values(by=["x1", "x2", "d_i"])
+    p_hat_d_expected = (
+        pd.read_csv(shared_datadir / "paper_example/p_hat_d.csv")
+        .sort_values(by=["x1", "x2", "d"])
         .reset_index(drop=True)
     )
     pd.testing.assert_frame_equal(
-        p_hat_di,
-        p_hat_di_expected,
+        p_hat_d,
+        p_hat_d_expected,
         check_dtype=False,
     )
 

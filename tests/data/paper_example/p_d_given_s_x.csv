@@ -1,4 +1,4 @@
-x1,x2,d_i,s_j,posterior
+x1,x2,d,s,posterior
 0,0,endemic,A,0.0
 0,0,endemic,B,0.0
 0,0,endemic,C,0.0

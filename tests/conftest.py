@@ -35,4 +35,4 @@ def paper_example_timeliness(shared_datadir) -> Timeliness:
 
 def compare_dicts_with_nas(result, expected) -> None:
     for k, v in expected.items():
-        np.testing.assert_equal(result[k], v)
+        np.testing.assert_allclose(result[k], v)

@@ -1,19 +1,18 @@
-<a href="https://app.travis-ci.com/aauss/epi-quark.svg?branch=master">
-        <img src="https://img.shields.io/circleci/project/github/badges/shields/master" alt="build status"></a>
+![Buildstatus](https://github.com/aauss/epi-quark/actions/workflows/ci.yml/badge.svg?branch=master)
 <a href="https://github.com/psf/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 <a href="https://codecov.io/gh/aauss/epi-quark">
   <img src="https://codecov.io/gh/aauss/epi-quark/branch/master/graph/badge.svg?token=U7VTC00G71"/>
 </a>
-<a href="https://lgtm.com/projects/g/aauss/epi-quark/alerts/"><img alt="Total alerts" src="https://img.shields.io/lgtm/alerts/g/aauss/epi-quark.svg?logo=lgtm&logoWidth=18"/></a>
+![CodeQL](https://github.com/aauss/epi-quark/workflows/CodeQL/badge.svg)
 <a href="https://opensource.org/licenses/MIT"><img alt="Code style: black" src="https://img.shields.io/badge/License-MIT-yellow.svg"></a>
 
 # Algorithm agnostic evaluation for (disease) outbreak detection
 
 ## Motivation
 
-In the field of disease outbreak detection, different types of algorithms are frequently used such as Farrington or SaTScan. Measuring and comparing their performances of different algorithm families is made difficult by a lack of a common approach in the community, different types of output, as well as different settings of implementation.
+In the field of disease outbreak detection, different types of algorithms are frequently used such as Farrington or SaTScan. Measuring and comparing the performances of different algorithm families is made difficult by a lack of a common approach in the community, different types of output, as well as different settings of implementation.
 
-The framework implemented in epi-quark to compute scores allows such evaluation and comparisons. 
+The framework implemented in epi-quark to compute scores allows such evaluation and comparisons.
 It is based on an heuristic to compare algorithm outputs at different aggregation scales and on expert-annotated infection cases.
 Further details can be found in an [accompanying paper](https://doi.org/10.1101/2022.03.16.22272469).
 
@@ -41,16 +40,19 @@ To build the documentation, run
 cd docs/
 make html
 ```
+
 which will build the sphinx-based HTML documentation. Open the index page `docs/build/html/index.html` to access and navigate it.
 
 ### Pre-commit
 
 If you want to check your code before committing it, you can use `pre-commit` to run CI checks set up for this repo.
 
-To install git hook scripts to evaluate your code, run 
+To install git hook scripts to evaluate your code, run
+
 ```
 pre-commit install
 ```
+
 This might take a moment. If the setup was successful, your code is checked before you can commit it. You can read more about it [here](https://pre-commit.com/).
 
 ## How to use the scorer
@@ -78,7 +80,7 @@ where the data labels are extracted from the `data_label` column, its values for
 
 In this table, `one` and `two` are the labels for an outbreak and `endemic` are cases that don't belong to an outbreak. You data needs to at least contain data with the data_label `endemic`. On the other hand, `non_cases` only occur if all other labels have a value of `0`. This is, however, handled internally by the package and therefore no `data_label` should be named `non_cases`.
 
-The coordinate system of the data DataFrame is considered complete, i.e., you should make sure that all relevant cells are contained in the coordinate columns. Also,  each cell should contain one entry for each data_label that you want to consider for your analysis. 
+The coordinate system of the data DataFrame is considered complete, i.e., you should make sure that all relevant cells are contained in the coordinate columns. Also,  each cell should contain one entry for each data_label that you want to consider for your analysis.
 
 #### **signals**
 
