@@ -1,5 +1,5 @@
 from dataclasses import dataclass
-from typing import Optional, Union
+from typing import Optional, cast
 
 import numpy as np
 import pandas as pd
@@ -40,7 +40,7 @@ def score(
     metric: str,
     threshold_true: Optional[float] = None,
     threshold_pred: Optional[float] = None,
-    weighting: Optional[Union[str, np.ndarray]] = None,
+    weighting: Optional[str] = None,
     time_space_weighting: dict[str, float] = None,
     time_axis: Optional[str] = None,
 ):
@@ -99,8 +99,6 @@ def score(
                         probability per outbreak given cell.
         weighting: Assigns weight to :math:`p(d|x)` and :math:`\hat{p}(d|x)` by either
                  'cases' or 'timespace'. If None, no weighting is applied.
-                 A 1-D numpy array where each entry is the weighting per cell in the same
-                 order as the `cases` DataFrame
         time_space_weighting: Only valid if weight is 'timespace'. Dict with dimension of
                               the case data over which space-weighting should be applied
                               as keys.
@@ -217,7 +215,7 @@ def conf_matrix(
     signals: pd.DataFrame,
     threshold_true: Optional[float] = None,
     threshold_pred: Optional[float] = None,
-    weighting: Optional[Union[str, np.ndarray]] = None,
+    weighting: Optional[str] = None,
     time_space_weighting: dict[str, float] = None,
     time_axis: Optional[str] = None,
 ) -> dict[str, np.ndarray]:
@@ -253,8 +251,6 @@ def conf_matrix(
                         probability per outbreak given cell.
         weighting: Assigns weight to :math:`p(d|x)` and :math:`\hat{p}(d|x)` by either
                  'cases' or 'timespace'. If None, no weighting is applied.
-                 A 1-D numpy array where each entry is the weighting per cell in the same
-                 order as the `cases` DataFrame
         time_space_weighting: Only valid if weight is 'timespace'. Dict with dimension of
                               the case data over which space-weighting should be applied
                               as keys.
@@ -269,13 +265,16 @@ def conf_matrix(
     if threshold_true is None:
         threshold_true = 0
     threshold_pred = threshold_pred or 0.5
-    return ScoreCalculator(cases, signals).calc_score(
-        scorer=sk_metrics.confusion_matrix,
-        p_thresh=threshold_true,
-        p_hat_thresh=threshold_pred,
-        weighting=weighting,
-        time_space_weighting=time_space_weighting,
-        time_axis=time_axis,
+    return cast(
+        dict[str, np.ndarray],
+        ScoreCalculator(cases, signals).calc_score(
+            scorer=sk_metrics.confusion_matrix,
+            p_thresh=threshold_true,
+            p_hat_thresh=threshold_pred,
+            weighting=weighting,
+            time_space_weighting=time_space_weighting,
+            time_axis=time_axis,
+        ),
     )
 
 
